@@ -1,0 +1,11 @@
+Instructions to manually fix:
+
+1. The file /components/contacts/ContactDetailsV4Enhanced.tsx exists and has all the correct code
+2. Copy this file to /components/contacts/ContactDetailsV4.tsx  
+3. In the new file, replace all instances of "ContactDetailsV4Enhanced" with "ContactDetailsV4"
+4. In the new file, replace all instances of "ContactDetailsV4EnhancedProps" with "ContactDetailsV4Props"
+5. Save the file
+
+The App.tsx is already correctly importing from ContactDetailsV4.tsx
+
+This will make the enhanced version load properly.

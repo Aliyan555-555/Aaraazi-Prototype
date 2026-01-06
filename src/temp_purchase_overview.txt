@@ -1,0 +1,338 @@
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-4">
+            {/* PHASE 2 FOUNDATION: New data-dense layout with InfoPanel, MetricCard, StatusTimeline */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Content (2/3 width) */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* PHASE 3: Connected Entities Card (Keep existing) ✅ */}
+                {graph && (
+                  <ConnectedEntitiesCard
+                    graph={graph}
+                    currentEntityType="purchaseCycle"
+                    onNavigate={handleNavigation}
+                  />
+                )}
+                
+                {/* FLEXIBLE PAYMENT SYSTEM: Payment Summary (Keep existing) ✅ */}
+                {(cycle.linkedDealId || cycle.createdDealId) && (() => {
+                  const dealId = cycle.linkedDealId || cycle.createdDealId;
+                  const deal = dealId ? getDealById(dealId) : null;
+                  
+                  return deal ? (
+                    <PaymentSummaryReadOnly
+                      deal={deal}
+                      onViewFullDetails={() => handleNavigation('deal-detail', deal.id)}
+                      compact={false}
+                    />
+                  ) : null;
+                })()}
+                
+                {/* Purchase Cycle Information - InfoPanel (Data-Dense) */}
+                <InfoPanel
+                  title="Purchase Information"
+                  data={[
+                    { 
+                      label: 'Status', 
+                      value: <Badge className={getStatusColor(cycle.status)}>{cycle.status}</Badge>
+                    },
+                    { 
+                      label: 'Purchaser Type', 
+                      value: <span className="capitalize">{cycle.purchaserType}</span>,
+                      icon: <UserIcon className="w-4 h-4" /> 
+                    },
+                    { 
+                      label: 'Purchaser Name', 
+                      value: cycle.purchaserName,
+                      icon: <UserIcon className="w-4 h-4" /> 
+                    },
+                    { 
+                      label: 'Agent', 
+                      value: cycle.agentName,
+                      icon: <UserIcon className="w-4 h-4" /> 
+                    },
+                    { 
+                      label: 'Offer Date', 
+                      value: cycle.offerDate ? new Date(cycle.offerDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : 'N/A',
+                      icon: <Calendar className="w-4 h-4" /> 
+                    },
+                    ...(cycle.targetCloseDate ? [{ 
+                      label: 'Target Close Date', 
+                      value: new Date(cycle.targetCloseDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }),
+                      icon: <Calendar className="w-4 h-4" /> 
+                    }] : []),
+                    ...(cycle.actualCloseDate ? [{ 
+                      label: 'Actual Close Date', 
+                      value: new Date(cycle.actualCloseDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }),
+                      icon: <CheckCircle className="w-4 h-4" /> 
+                    }] : []),
+                  ]}
+                  columns={2}
+                  density="comfortable"
+                />
+
+                {/* Pricing Information - InfoPanel */}
+                <InfoPanel
+                  title="Pricing"
+                  data={[
+                    { 
+                      label: 'Asking Price', 
+                      value: formatPKR(cycle.askingPrice),
+                      icon: <DollarSign className="w-4 h-4" /> 
+                    },
+                    { 
+                      label: 'Offer Amount', 
+                      value: formatPKR(cycle.offerAmount),
+                      icon: <TrendingDown className="w-4 h-4" /> 
+                    },
+                  ]}
+                  columns={2}
+                  density="comfortable"
+                />
+                
+                {/* Editable Negotiated Price Section */}
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Negotiated Price</Label>
+                      {!editingNegotiatedPrice && cycle.status !== 'acquired' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingNegotiatedPrice(true)}
+                        >
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                    {editingNegotiatedPrice ? (
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          value={negotiatedPrice}
+                          onChange={(e) => setNegotiatedPrice(Number(e.target.value))}
+                          placeholder="Enter negotiated price"
+                        />
+                        <Button onClick={handleSaveNegotiatedPrice}>Save</Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setEditingNegotiatedPrice(false);
+                            setNegotiatedPrice(cycle.negotiatedPrice || cycle.offerAmount);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-lg font-medium">
+                        {cycle.negotiatedPrice ? formatPKR(cycle.negotiatedPrice) : formatPKR(cycle.offerAmount)}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Agency Investment ROI (if applicable) */}
+                {cycle.purchaserType === 'agency' && roi && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardHeader>
+                      <CardTitle className="text-sm">Investment Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-600">Total Investment</p>
+                          <p className="font-medium">{formatPKR(roi.invested)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Expected Return</p>
+                          <p className="font-medium">{formatPKR(roi.expectedReturn)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600">Expected ROI</p>
+                          <p className={`font-medium ${roi.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {roi.roi.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                      {cycle.purpose && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-sm text-gray-600">Purpose: <span className="font-medium capitalize">{cycle.purpose}</span></p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Notes (if exist) */}
+                {cycle.notes && (
+                  <InfoPanel
+                    title="Notes"
+                    data={[
+                      { 
+                        label: 'Details', 
+                        value: cycle.notes 
+                      }
+                    ]}
+                    columns={1}
+                    density="comfortable"
+                    showDivider={false}
+                  />
+                )}
+
+                {/* Purchase Cycle Workflow Timeline */}
+                <StatusTimeline
+                  steps={[
+                    { 
+                      label: 'Prospecting', 
+                      status: 'complete',
+                      date: cycle.createdAt,
+                      description: 'Property identified'
+                    },
+                    { 
+                      label: 'Offer Made', 
+                      status: ['offer-made', 'negotiation', 'accepted', 'due-diligence', 'financing', 'closing', 'acquired'].includes(cycle.status) ? 'complete' : 'pending',
+                      date: cycle.offerDate,
+                      description: formatPKR(cycle.offerAmount)
+                    },
+                    { 
+                      label: 'Negotiation', 
+                      status: cycle.status === 'negotiation' ? 'current' : 
+                             ['accepted', 'due-diligence', 'financing', 'closing', 'acquired'].includes(cycle.status) ? 'complete' : 'pending',
+                      description: cycle.negotiatedPrice ? formatPKR(cycle.negotiatedPrice) : undefined
+                    },
+                    { 
+                      label: 'Accepted', 
+                      status: cycle.status === 'accepted' ? 'current' : 
+                             ['due-diligence', 'financing', 'closing', 'acquired'].includes(cycle.status) ? 'complete' : 'pending'
+                    },
+                    { 
+                      label: 'Due Diligence', 
+                      status: cycle.status === 'due-diligence' ? 'current' : 
+                             ['financing', 'closing', 'acquired'].includes(cycle.status) ? 'complete' : 'pending',
+                      description: `${dueDiligenceProgress}/4 complete`
+                    },
+                    { 
+                      label: 'Financing', 
+                      status: cycle.status === 'financing' ? 'current' : 
+                             ['closing', 'acquired'].includes(cycle.status) ? 'complete' : 'pending',
+                      description: cycle.loanApproved ? 'Approved' : undefined
+                    },
+                    { 
+                      label: 'Acquired', 
+                      status: cycle.status === 'acquired' ? 'complete' : 
+                             cycle.status === 'cancelled' ? 'skipped' : 'pending',
+                      date: cycle.actualCloseDate
+                    }
+                  ]}
+                />
+              </div>
+
+              {/* Sidebar (1/3 width) */}
+              <div className="space-y-6">
+                {/* Key Metrics */}
+                <MetricCard
+                  label="Offer Amount"
+                  value={formatPKR(cycle.offerAmount)}
+                  icon={<DollarSign className="w-4 h-4" />}
+                  variant="info"
+                />
+
+                {cycle.negotiatedPrice && (
+                  <MetricCard
+                    label="Negotiated Price"
+                    value={formatPKR(cycle.negotiatedPrice)}
+                    icon={<TrendingDown className="w-4 h-4" />}
+                    trend={{
+                      direction: cycle.negotiatedPrice < cycle.askingPrice ? 'down' : 'up',
+                      value: ((1 - cycle.negotiatedPrice / cycle.askingPrice) * 100).toFixed(1)
+                    }}
+                    comparison="vs asking price"
+                    variant="success"
+                  />
+                )}
+
+                <MetricCard
+                  label="Due Diligence"
+                  value={`${dueDiligenceProgress}/4`}
+                  icon={<FileCheck className="w-4 h-4" />}
+                  trend={{
+                    direction: dueDiligenceProgress === 4 ? 'up' : 'neutral',
+                    value: dueDiligenceProgress === 4 ? 'Complete' : 'In Progress'
+                  }}
+                  variant={dueDiligenceProgress === 4 ? 'success' : 'default'}
+                />
+
+                {/* Quick Stats Panel */}
+                <InfoPanel
+                  title="Quick Stats"
+                  data={[
+                    { 
+                      label: 'Days Since Offer', 
+                      value: cycle.offerDate ? Math.floor((Date.now() - new Date(cycle.offerDate).getTime()) / (1000 * 60 * 60 * 24)) : 'N/A',
+                      icon: <Clock className="w-4 h-4" /> 
+                    },
+                    { 
+                      label: 'Financing Type', 
+                      value: <span className="capitalize">{cycle.financingType}</span>,
+                      icon: <Landmark className="w-4 h-4" /> 
+                    },
+                    ...(cycle.loanAmount ? [{ 
+                      label: 'Loan Status', 
+                      value: <Badge className={cycle.loanApproved ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                        {cycle.loanApproved ? 'Approved' : 'Pending'}
+                      </Badge>
+                    }] : []),
+                  ]}
+                  columns={1}
+                  density="compact"
+                />
+
+                {/* Quick Actions */}
+                {cycle.status !== 'acquired' && cycle.status !== 'cancelled' && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Quick Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start gap-2"
+                        onClick={() => setActiveTab('details')}
+                      >
+                        <FileCheck className="h-4 w-4" />
+                        View Due Diligence
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start gap-2"
+                        onClick={() => setActiveTab('actions')}
+                      >
+                        <ClipboardCheck className="h-4 w-4" />
+                        Update Status
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start gap-2"
+                        onClick={() => handleNavigation('property-detail', property.id)}
+                      >
+                        <Home className="h-4 w-4" />
+                        View Property
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </TabsContent>
