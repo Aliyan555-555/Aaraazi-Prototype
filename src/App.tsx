@@ -46,12 +46,16 @@ import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoadingFallback } from './components/LoadingFallback';
+import { Button } from './components/ui/button';
 import { getUnreadCount } from './lib/notifications';
-import { getPropertyById, getContacts } from './lib/data';
-import { getSellCycleById } from './lib/sellCycle';
+import { getPropertyById, getContacts, getProperties, deleteContact } from './lib/data';
+import { getSellCycleById, getSellCycles } from './lib/sellCycle';
+import { getPurchaseCycles, getPurchaseCycleById } from './lib/purchaseCycle';
+import { getRentCycles, getRentCycleById } from './lib/rentCycle';
 import { BrandTestPage } from './components/test/BrandTestPage';
 import { NotificationShowcase } from './components/test/NotificationShowcase'; // PHASE 5 TASK 3
 import { getBuyerRequirementById } from './lib/buyerRequirements';
+import { getRentRequirement } from './lib/rentRequirements';
 import { logger } from './lib/logger';
 
 // Property Status Migration (load for dev tools access)
@@ -294,7 +298,6 @@ function App() {
       
       // If we're viewing this property, reload it
       if (selectedProperty && selectedProperty.id === propertyId) {
-        const { getPropertyById } = require('./lib/data');
         const updatedProperty = getPropertyById(propertyId);
         if (updatedProperty) {
           setSelectedProperty(updatedProperty);
@@ -307,7 +310,6 @@ function App() {
       
       // If we're viewing this property, reload it
       if (selectedProperty && selectedProperty.id === propertyId) {
-        const { getPropertyById } = require('./lib/data');
         const updatedProperty = getPropertyById(propertyId);
         if (updatedProperty) {
           setSelectedProperty(updatedProperty);
@@ -773,7 +775,6 @@ function App() {
       case 'edit-property':
         const editPropertyId = sessionStorage.getItem('edit_property_id');
         if (editPropertyId) {
-          const { getPropertyById } = require('./lib/data');
           const propertyToEdit = getPropertyById(editPropertyId);
           
           if (propertyToEdit) {
@@ -801,7 +802,6 @@ function App() {
       case 'add-sell-cycle':
         const sellCyclePropertyId = sessionStorage.getItem('cycle_property_id');
         if (sellCyclePropertyId) {
-          const { getPropertyById } = require('./lib/data');
           const cycleProperty = getPropertyById(sellCyclePropertyId);
           
           if (cycleProperty) {
@@ -829,7 +829,6 @@ function App() {
       case 'add-purchase-cycle':
         const purchaseCyclePropertyId = sessionStorage.getItem('cycle_property_id');
         if (purchaseCyclePropertyId) {
-          const { getPropertyById } = require('./lib/data');
           const cycleProperty = getPropertyById(purchaseCyclePropertyId);
           
           if (cycleProperty) {
@@ -857,7 +856,6 @@ function App() {
       case 'add-rent-cycle':
         const rentCyclePropertyId = sessionStorage.getItem('cycle_property_id');
         if (rentCyclePropertyId) {
-          const { getPropertyById } = require('./lib/data');
           const cycleProperty = getPropertyById(rentCyclePropertyId);
           
           if (cycleProperty) {
@@ -886,10 +884,6 @@ function App() {
       case 'property-detail':
         if (selectedProperty) {
           // Load cycles for this property
-          const { getSellCycles } = require('./lib/sellCycle');
-          const { getPurchaseCycles } = require('./lib/purchaseCycle');
-          const { getRentCycles } = require('./lib/rentCycle');
-          
           const propertySellCycles = getSellCycles(user.role === 'admin' ? undefined : user.id, user.role)
             .filter((c: SellCycle) => c.propertyId === selectedProperty.id);
           const propertyPurchaseCycles = getPurchaseCycles(user.role === 'admin' ? undefined : user.id, user.role)
@@ -1047,7 +1041,7 @@ function App() {
       case 'sell-cycle-details':
         if (selectedSellCycle) {
           // Get the property for this cycle
-          const properties = require('./lib/data').getProperties();
+          const properties = getProperties();
           const cycleProperty = properties.find((p: Property) => p.id === selectedSellCycle.propertyId);
           
           return cycleProperty ? (
@@ -1061,7 +1055,7 @@ function App() {
               }}
               onUpdate={() => {
                 // Reload the cycle
-                const updatedCycle = require('./lib/sellCycle').getSellCycleById(selectedSellCycle.id);
+                const updatedCycle = getSellCycleById(selectedSellCycle.id);
                 if (updatedCycle) {
                   setSelectedSellCycle(updatedCycle);
                 }
@@ -1084,7 +1078,6 @@ function App() {
           user={user} 
           onNavigate={(section, id) => {
             if (section === 'purchase-cycle-details' && id) {
-              const { getPurchaseCycleById } = require('./lib/purchaseCycle');
               const purchaseCycle = getPurchaseCycleById(id);
               if (purchaseCycle) {
                 setSelectedPurchaseCycle(purchaseCycle);
@@ -1110,7 +1103,7 @@ function App() {
       case 'purchase-cycle-details':
         if (selectedPurchaseCycle) {
           // Get the property for this cycle
-          const purchaseProperties = require('./lib/data').getProperties();
+          const purchaseProperties = getProperties();
           const purchaseCycleProperty = purchaseProperties.find((p: Property) => p.id === selectedPurchaseCycle.propertyId);
           
           return purchaseCycleProperty ? (
@@ -1124,7 +1117,7 @@ function App() {
               }}
               onUpdate={() => {
                 // Reload the cycle
-                const updatedCycle = require('./lib/purchaseCycle').getPurchaseCycleById(selectedPurchaseCycle.id);
+                const updatedCycle = getPurchaseCycleById(selectedPurchaseCycle.id);
                 if (updatedCycle) {
                   setSelectedPurchaseCycle(updatedCycle);
                 }
@@ -1141,7 +1134,6 @@ function App() {
           user={user} 
           onNavigate={(section, id) => {
             if (section === 'purchase-cycle-details' && id) {
-              const { getPurchaseCycleById } = require('./lib/purchaseCycle');
               const purchaseCycle = getPurchaseCycleById(id);
               if (purchaseCycle) {
                 setSelectedPurchaseCycle(purchaseCycle);
@@ -1163,7 +1155,6 @@ function App() {
           user={user} 
           onNavigate={(section, id) => {
             if (section === 'rent-cycle-details' && id) {
-              const { getRentCycleById } = require('./lib/rentCycle');
               const rentCycle = getRentCycleById(id);
               if (rentCycle) {
                 setSelectedRentCycle(rentCycle);
@@ -1189,7 +1180,7 @@ function App() {
       case 'rent-cycle-details':
         if (selectedRentCycle) {
           // Get the property for this cycle
-          const rentProperties = require('./lib/data').getProperties();
+          const rentProperties = getProperties();
           const rentCycleProperty = rentProperties.find((p: Property) => p.id === selectedRentCycle.propertyId);
           
           return rentCycleProperty ? (
@@ -1203,7 +1194,7 @@ function App() {
               }}
               onUpdate={() => {
                 // Reload the cycle
-                const updatedCycle = require('./lib/rentCycle').getRentCycleById(selectedRentCycle.id);
+                const updatedCycle = getRentCycleById(selectedRentCycle.id);
                 if (updatedCycle) {
                   setSelectedRentCycle(updatedCycle);
                 }
@@ -1220,7 +1211,6 @@ function App() {
           user={user} 
           onNavigate={(section, id) => {
             if (section === 'rent-cycle-details' && id) {
-              const { getRentCycleById } = require('./lib/rentCycle');
               const rentCycle = getRentCycleById(id);
               if (rentCycle) {
                 setSelectedRentCycle(rentCycle);
@@ -1242,7 +1232,6 @@ function App() {
           user={user}
           onNavigate={(section, id) => {
             if (section === 'buyer-requirement-details' && id) {
-              const { getBuyerRequirementById } = require('./lib/buyerRequirements');
               const requirement = getBuyerRequirementById(id);
               if (requirement) {
                 setSelectedBuyerRequirement(requirement);
@@ -1304,7 +1293,6 @@ function App() {
       case 'rent-requirement-details':
         const rentReqId = sessionStorage.getItem('selected_rent_requirement_id');
         if (rentReqId) {
-          const { getRentRequirement } = require('./lib/rentRequirements');
           const rentRequirement = getRentRequirement(rentReqId);
           if (rentRequirement) {
             return <RentRequirementDetailsV4 
@@ -1324,7 +1312,6 @@ function App() {
                 }
               }}
               onNavigateToRentCycle={(rentCycleId) => {
-                const { getRentCycleById } = require('./lib/rentCycle');
                 const rentCycle = getRentCycleById(rentCycleId);
                 if (rentCycle) {
                   setSelectedRentCycle(rentCycle);
@@ -1391,7 +1378,6 @@ function App() {
                 sessionStorage.setItem('selected_contact_id', id);
                 setActiveTab('contact-details');
               } else if (view === 'buyer-requirements' && id) {
-                const { getBuyerRequirementById } = require('./lib/buyerRequirements');
                 const requirement = getBuyerRequirementById(id);
                 if (requirement) {
                   setSelectedBuyerRequirement(requirement);
@@ -1417,7 +1403,6 @@ function App() {
                 sessionStorage.setItem('selected_contact_id', id);
                 setActiveTab('contact-details');
               } else if (view === 'buyer-requirements' && id) {
-                const { getBuyerRequirementById } = require('./lib/buyerRequirements');
                 const requirement = getBuyerRequirementById(id);
                 if (requirement) {
                   setSelectedBuyerRequirement(requirement);
@@ -1511,7 +1496,6 @@ function App() {
                 setActiveTab('edit-contact');
               }}
               onDelete={(id) => {
-                const { deleteContact } = require('./lib/data');
                 deleteContact(id);
                 sessionStorage.removeItem('selected_contact_id');
                 setActiveTab('contacts');
