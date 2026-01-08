@@ -68,7 +68,7 @@ import { PaymentHistory } from './deals/PaymentHistory';
 import { CreatePaymentPlanModal } from './deals/CreatePaymentPlanModal';
 import { AddInstallmentModal } from './deals/AddInstallmentModal';
 import { RecordPaymentModal } from './deals/RecordPaymentModal';
-import { generatePaymentSchedulePDF } from './lib/pdfExport';
+import { generatePaymentSchedulePDF } from '../lib/pdfExport';
 
 // Icons
 import {

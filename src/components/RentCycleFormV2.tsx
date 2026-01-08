@@ -30,6 +30,7 @@ import {
   required,
   positiveNumber,
   minValue,
+  compose,
   validateForm,
   hasErrors,
   type FormErrors,
@@ -89,27 +90,27 @@ interface RentCycleFormV2Props {
 // ==================== VALIDATION RULES ====================
 
 const step1ValidationRules = {
-  landlordId: [required('Please select a landlord')],
-  landlordName: [required('Landlord name is required')],
+  landlordId: compose(required.withMessage('Please select a landlord')),
+  landlordName: compose(required.withMessage('Landlord name is required')),
 };
 
 const step2ValidationRules = {
-  monthlyRent: [
-    required('Monthly rent is required'),
-    positiveNumber('Rent must be a positive number'),
-    minValue(1, 'Rent must be greater than 0'),
-  ],
+  monthlyRent: compose(
+    required.withMessage('Monthly rent is required'),
+    positiveNumber.withMessage('Rent must be a positive number'),
+    minValue.rule(1, 'Rent must be greater than 0')
+  ),
 };
 
 const step3ValidationRules = {
-  leaseDuration: [
-    required('Lease duration is required'),
-    positiveNumber('Duration must be a positive number'),
-  ],
-  commissionMonths: [
-    required('Commission is required'),
-    positiveNumber('Commission must be a positive number'),
-  ],
+  leaseDuration: compose(
+    required.withMessage('Lease duration is required'),
+    positiveNumber.withMessage('Duration must be a positive number')
+  ),
+  commissionMonths: compose(
+    required.withMessage('Commission is required'),
+    positiveNumber.withMessage('Commission must be a positive number')
+  ),
 };
 
 // Step 4 has no required fields

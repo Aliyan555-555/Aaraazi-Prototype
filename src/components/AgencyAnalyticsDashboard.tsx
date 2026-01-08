@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { formatCurrency } from './lib/currency';
+import { formatCurrency } from '../lib/currency';
 
 // PHASE 5: Import foundation components ✅
 import { MetricCard } from './ui/metric-card';

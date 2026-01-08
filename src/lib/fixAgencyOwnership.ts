@@ -14,7 +14,7 @@
 
 import { getProperties, updateProperty } from './data';
 import { getPurchaseCycles } from './purchaseCycle';
-import { formatPropertyAddress } from './propertyUtils';
+import { formatPropertyAddress } from './utils';
 
 // Helper to safely format address
 const safeFormatAddress = (address: any): string => {

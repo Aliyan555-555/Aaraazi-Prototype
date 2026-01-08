@@ -19,7 +19,7 @@ import {
   checkForOwnershipIssues,
   type FixResult 
 } from '../lib/fixAgencyOwnership';
-import { formatPropertyAddress } from '../lib/propertyUtils';
+import { formatPropertyAddress } from '../lib/utils';
 
 // Helper function to safely format address (handles both string and object)
 const safeFormatAddress = (address: any): string => {

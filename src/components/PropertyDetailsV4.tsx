@@ -47,7 +47,7 @@ import { StatusBadge } from './layout/StatusBadge';
 
 // Investor Syndication Components
 import { MultiInvestorPurchaseModal, InvestorSharesCard } from './multi-investor-purchase';
-import { RecordTransactionModal, PropertyTransactionHistory } from './investor-transactions';
+import { RecordTransactionModal, PropertyTransactionHistory } from './transactions';
 import { SaleDistributionModal, InvestorDistributionHistory } from './sale-distribution';
 import { getInvestorById } from '../lib/investors';
 

@@ -77,8 +77,8 @@ import { PaymentHistory } from './deals/PaymentHistory';
 import { CreatePaymentPlanModal } from './deals/CreatePaymentPlanModal';
 import { AddInstallmentModal } from './deals/AddInstallmentModal';
 import { RecordPaymentModal } from './deals/RecordPaymentModal';
-import { exportPaymentRecord } from './lib/dealPayments';
-import { generatePaymentSchedulePDF, generatePaymentReceiptPDF } from './lib/pdfExport';
+import { exportPaymentRecord } from '../lib/dealPayments';
+import { generatePaymentSchedulePDF, generatePaymentReceiptPDF } from '../lib/pdfExport';
 
 interface DealDetailsProps {
   dealId: string;

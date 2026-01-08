@@ -9,6 +9,16 @@ import { transferOwnership } from './ownership';
 import { saveTransaction } from './transactions';
 import { syncPropertyStatusFromSellCycle } from './propertyStatusSync';
 import { formatPropertyAddress } from './utils';
+import { createDealFromOffer, getDealById } from './deals';
+import { createNotification } from './notifications';
+import { getBuyerRequirementById } from './buyerRequirements';
+import { 
+  createPurchaseCycleFromBuyerRequirement, 
+  markPurchaseCycleOfferAccepted,
+  getPurchaseCycleByBuyerRequirement,
+  getPurchaseCycleById,
+  updatePurchaseCycle
+} from './purchaseCycle';
 
 const SELL_CYCLES_KEY = 'sell_cycles_v3';
 
@@ -249,8 +259,6 @@ export function updateOffer(
       const acceptedOffer = updatedOffers.find(o => o.id === offerId);
       
       if (acceptedOffer?.linkedPurchaseCycleId) {
-        const { updatePurchaseCycle } = require('./purchaseCycle');
-        
         console.log('🔗 Syncing offer acceptance to purchase cycle');
         console.log(`   - Offer ID: ${offerId}`);
         console.log(`   - Purchase Cycle: ${acceptedOffer.linkedPurchaseCycleId}`);
@@ -305,17 +313,7 @@ export function acceptOffer(sellCycleId: string, offerId: string): void {
     console.log(`   - Sell Cycle ID: ${sellCycleId}`);
     console.log(`   - Offer ID: ${offerId}`);
     
-    // Import required functions
-    const { createDealFromOffer } = require('./deals');
-    const { createNotification } = require('./notifications');
-    const { getBuyerRequirementById } = require('./buyerRequirements');
-    const { 
-      createPurchaseCycleFromBuyerRequirement, 
-      markPurchaseCycleOfferAccepted,
-      getPurchaseCycleByBuyerRequirement,
-      getPurchaseCycleById // CRITICAL FIX: Import this
-    } = require('./purchaseCycle');
-    const { getProperties } = require('./data');
+    // Functions are now imported at the top of the file
     
     // Get updated cycle
     const updatedCycle = getSellCycleById(sellCycleId);
@@ -420,7 +418,6 @@ export function acceptOffer(sellCycleId: string, offerId: string): void {
     }
     
     // Verify the deal was saved
-    const { getDealById } = require('./deals');
     const savedDeal = getDealById(deal.id);
     if (!savedDeal) {
       throw new Error('Deal was created but not found in storage after save');
