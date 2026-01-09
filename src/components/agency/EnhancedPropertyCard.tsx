@@ -138,13 +138,13 @@ export function EnhancedPropertyCard({
 
   return (
     <Card 
-      className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer group ${
+      className={`hover:shadow-lg transition-all cursor-pointer group ${
         isSelected ? 'ring-2 ring-blue-500' : ''
       }`}
       onClick={onClick}
     >
       {/* Image Section with Overlays */}
-      <div className="relative h-48 bg-gray-100">
+      <div className="relative h-48 bg-gray-100 overflow-hidden rounded-t-lg">
         {/* Selection Checkbox */}
         {onSelect && (
           <div 

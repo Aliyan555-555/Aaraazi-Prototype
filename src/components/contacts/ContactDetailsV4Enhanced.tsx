@@ -1174,12 +1174,14 @@ export const ContactDetailsV4Enhanced: React.FC<ContactDetailsV4EnhancedProps> =
   return (
     <>
       <DetailPageTemplate
-        title={contact.name}
-        breadcrumbs={breadcrumbs}
-        onBack={onBack}
-        metrics={metrics}
-        primaryActions={primaryActions}
-        secondaryActions={secondaryActions}
+        pageHeader={{
+          title: contact.name,
+          breadcrumbs: breadcrumbs,
+          onBack: onBack,
+          metrics: metrics,
+          primaryActions: primaryActions,
+          secondaryActions: secondaryActions,
+        }}
         tabs={tabs}
         defaultTab="overview"
       />

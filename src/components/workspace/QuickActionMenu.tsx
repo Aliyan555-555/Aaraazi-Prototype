@@ -84,26 +84,27 @@ export const QuickActionMenu = React.memo<QuickActionMenuProps>(({
   const Icon = orientation === 'vertical' ? MoreVertical : MoreHorizontal;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        {trigger || (
-          <Button
-            variant={variant}
-            size={size}
-            className={cn(
-              'h-8 w-8 p-0',
-              showOnHover && 'opacity-0 group-hover:opacity-100 transition-opacity',
-              className
-            )}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Icon className="h-4 w-4" />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        )}
-      </DropdownMenuTrigger>
-      
-      <DropdownMenuContent align={align} onClick={(e) => e.stopPropagation()}>
+    <div className="relative">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {trigger || (
+            <Button
+              variant={variant}
+              size={size}
+              className={cn(
+                'h-8 w-8 p-0',
+                showOnHover && 'opacity-0 group-hover:opacity-100 transition-opacity',
+                className
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          )}
+        </DropdownMenuTrigger>
+        
+        <DropdownMenuContent align={align} className="z-50" onClick={(e) => e.stopPropagation()}>
         {visibleActions.map((action, index) => (
           <React.Fragment key={action.id}>
             {/* Separator */}
@@ -131,6 +132,7 @@ export const QuickActionMenu = React.memo<QuickActionMenuProps>(({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+    </div>
   );
 });
 

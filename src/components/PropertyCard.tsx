@@ -60,7 +60,7 @@ export function PropertyCard({
   const totalActiveCycles = sellCyclesCount + purchaseCyclesCount + rentCyclesCount;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer group">
       {/* Image */}
       <div
         onClick={onClick}
@@ -103,14 +103,15 @@ export function PropertyCard({
         )}
 
         {/* Action Menu */}
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <div className="relative">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50">
               {onStartCycle && (
                 <>
                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onStartCycle('sell'); }}>
@@ -141,8 +142,9 @@ export function PropertyCard({
                   Delete Property
                 </DropdownMenuItem>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
