@@ -4,24 +4,24 @@
  * CORRECTED: Purchase Cycle created WHEN OFFER IS ACCEPTED, not when sent
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { BuyerRequirement } from '../types';
+import { BuyerRequirement, User } from '../types';
 import { PropertyMatch } from '../lib/propertyMatching';
 import { toast } from 'sonner';
-import { addOffer } from '../lib/sellCycle';
+import { addOffer, getSellCycleById } from '../lib/sellCycle';
 import { DollarSign, User as UserIcon, FileText, Info } from 'lucide-react';
 import { formatPKR } from '../lib/currency';
 import { formatPropertyAddress } from '../lib/utils';
-import { getCurrentUser } from '../lib/auth';
 
 interface SendOfferToBuyerModalProps {
   match: PropertyMatch;
   buyerRequirement: BuyerRequirement;
+  user: User;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -29,26 +29,49 @@ interface SendOfferToBuyerModalProps {
 export function SendOfferToBuyerModal({
   match,
   buyerRequirement,
+  user,
   onClose,
   onSuccess,
 }: SendOfferToBuyerModalProps) {
-  const user = getCurrentUser();
+  // Debug: Log user prop on mount
+  console.log('SendOfferToBuyerModal rendered', { 
+    hasUser: !!user, 
+    userId: user?.id, 
+    userName: user?.name,
+    userObject: user 
+  });
+  
   const property = match.property;
   const sellCycleId = match.sellCycleId;
   const askingPrice = match.askingPrice;
   
-  // Safety check - user must be logged in
-  // Use useEffect to avoid setState during render
-  useEffect(() => {
-    if (!user) {
-      console.error('SendOfferToBuyerModal: No user logged in');
-      toast.error('You must be logged in to send offers');
-      onClose();
-    }
-  }, [user, onClose]);
+  // Safety check - user must be provided FIRST (before other checks)
+  if (!user || !user.id || !user.name) {
+    console.error('SendOfferToBuyerModal: Invalid user object', { 
+      user, 
+      hasUser: !!user, 
+      hasUserId: !!user?.id, 
+      hasUserName: !!user?.name,
+      userType: typeof user 
+    });
+    // Don't show toast here as it might be called during render
+    // useEffect will handle closing if needed
+    return null;
+  }
   
   // Safety check - property and sell cycle required
-  if (!user || !property || !sellCycleId) {
+  // Return null early to prevent rendering if critical data is missing
+  if (!property) {
+    console.warn('SendOfferToBuyerModal: Missing property', { match, property });
+    toast.error('Property information is missing');
+    onClose();
+    return null;
+  }
+  
+  if (!sellCycleId) {
+    console.warn('SendOfferToBuyerModal: Missing sellCycleId', { match, sellCycleId });
+    toast.error('Sell cycle ID is missing. Cannot send offer.');
+    onClose();
     return null;
   }
   
@@ -67,17 +90,52 @@ export function SendOfferToBuyerModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation checks
     if (!formData.offerAmount || formData.offerAmount <= 0) {
       toast.error('Please enter a valid offer amount');
+      return;
+    }
+    
+    if (!sellCycleId) {
+      console.error('SendOfferToBuyerModal: Missing sellCycleId', { match, sellCycleId });
+      toast.error('Error: Sell cycle ID is missing. Cannot send offer.');
+      return;
+    }
+    
+    // Verify sell cycle exists before attempting to add offer
+    const sellCycle = getSellCycleById(sellCycleId);
+    if (!sellCycle) {
+      console.error('SendOfferToBuyerModal: Sell cycle not found', { sellCycleId });
+      toast.error(`Error: Sell cycle not found (ID: ${sellCycleId}). The property may not be listed for sale.`);
+      return;
+    }
+    
+    if (!buyerRequirement?.id) {
+      console.error('SendOfferToBuyerModal: Missing buyer requirement ID', { buyerRequirement });
+      toast.error('Error: Buyer requirement information is missing.');
+      return;
+    }
+    
+    if (!user?.id) {
+      console.error('SendOfferToBuyerModal: Missing user ID', { user });
+      toast.error('Error: User information is missing.');
       return;
     }
     
     setIsSubmitting(true);
     
     try {
+      console.log('Sending offer...', {
+        sellCycleId,
+        buyerRequirementId: buyerRequirement.id,
+        offerAmount: formData.offerAmount,
+        userId: user.id,
+        sellCycleExists: !!sellCycle
+      });
+      
       // Send offer to the sell cycle
       // Purchase Cycle will be created automatically when seller accepts
-      addOffer(sellCycleId, {
+      const offer = addOffer(sellCycleId, {
         buyerId: buyerRequirement.id,
         buyerName: buyerRequirement.buyerName,
         buyerContact: buyerRequirement.contactNumber,
@@ -92,12 +150,14 @@ export function SendOfferToBuyerModal({
         sourceType: 'buyer-requirement' as const, // V3.0: Track source
       });
       
+      console.log('Offer created successfully:', offer.id);
       toast.success(`Offer sent successfully! The seller will review your offer.`);
       onSuccess();
       handleClose();
     } catch (error) {
       console.error('Error sending offer:', error);
-      toast.error('Failed to send offer');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to send offer: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }

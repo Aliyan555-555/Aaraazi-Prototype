@@ -1,1 +1,0 @@
-function n(s,a,t=!0){if(!s||s<=0||!a)return"N/A";const r=s.toLocaleString("en-PK",{minimumFractionDigits:0,maximumFractionDigits:2});if(!t)return r;const e=a.replace("sqft","sq-feet").replace("sqyards","sq-yards");return`${r} ${{"sq-feet":"sq ft",sqft:"sq ft","sq-yards":"sq yards",sqyards:"sq yards",marla:"Marla",kanal:"Kanal",acres:"Acres"}[e]||a}`}const o=n;export{o as f};

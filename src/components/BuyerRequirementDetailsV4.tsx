@@ -726,10 +726,11 @@ export function BuyerRequirementDetailsV4({
       />
 
       {/* Send Offer Modal */}
-      {showSendOfferModal && selectedMatch && (
+      {showSendOfferModal && selectedMatch && user && (
         <SendOfferToBuyerModal
           match={selectedMatch}
           buyerRequirement={requirement}
+          user={user}
           onClose={() => {
             setShowSendOfferModal(false);
             setSelectedMatch(null);
@@ -741,6 +742,14 @@ export function BuyerRequirementDetailsV4({
             toast.success('Offer sent successfully');
           }}
         />
+      )}
+      {showSendOfferModal && selectedMatch && !user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-lg p-6">
+            <p className="text-red-600">Error: User information is missing. Please refresh the page.</p>
+            <Button onClick={() => setShowSendOfferModal(false)} className="mt-4">Close</Button>
+          </div>
+        </div>
       )}
     </>
   );

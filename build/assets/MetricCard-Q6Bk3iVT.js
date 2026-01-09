@@ -1,6 +1,0 @@
-import{j as e,R as x,O as m,Q as p}from"./index-hZmLyELT.js";function b({label:n,value:t,icon:i,trend:s,onClick:r,variant:l="default",className:d=""}){const a=!!r,c=`
-    bg-white border border-gray-200 rounded-lg 
-    ${{default:"p-4",compact:"p-3",inline:"p-2"}[l]}
-    ${a?"cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all":""}
-    ${d}
-  `;return e.jsxs("div",{className:c,onClick:r,role:a?"button":void 0,tabIndex:a?0:void 0,onKeyDown:a?o=>o.key==="Enter"&&r?.():void 0,children:[e.jsxs("div",{className:"flex items-center justify-between mb-2",children:[e.jsx("span",{className:"text-gray-600",children:n}),i&&e.jsx("div",{className:"text-gray-400",children:x.cloneElement(i,{className:"w-4 h-4","aria-hidden":"true"})})]}),e.jsxs("div",{className:"flex items-baseline gap-2",children:[e.jsx("span",{className:"text-2xl text-[#030213]",children:typeof t=="number"?t.toLocaleString():t}),s&&e.jsxs("div",{className:`flex items-center gap-1 text-sm ${s.direction==="up"?"text-green-600":"text-red-600"}`,children:[s.direction==="up"?e.jsx(m,{className:"w-3 h-3","aria-label":"Trending up"}):e.jsx(p,{className:"w-3 h-3","aria-label":"Trending down"}),e.jsxs("span",{children:[s.value>0?"+":"",s.value,"%"]})]})]}),s?.period&&e.jsx("div",{className:"text-xs text-gray-500 mt-1",children:s.period})]})}export{b as M};
