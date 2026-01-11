@@ -290,3 +290,9 @@ export interface PropertyProfitLoss {
 // ============================================
 
 export * from './accounting';
+
+// ============================================
+// SAAS TYPES
+// ============================================
+
+export * from './saas';

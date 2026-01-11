@@ -27,7 +27,14 @@ import {
   TrendingUp,
   Home,
   Bell,
-  FileCheck
+  FileCheck,
+  UserSearch,
+  Briefcase,
+  Wallet,
+  TrendingDown,
+  ShoppingCart,
+  Receipt,
+  LayoutList
 } from 'lucide-react';
 import { SaaSUser } from '../types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -55,6 +62,13 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
+interface QuickAction {
+  id: string;
+  label: string;
+  icon: any;
+  primary: boolean;
+}
+
 export const Sidebar: React.FC<SidebarProps> = React.memo(({ 
   activeTab, 
   onTabChange, 
@@ -64,57 +78,38 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
   unreadNotificationCount,
   isCollapsed = false
 }) => {
-  // Agency Module Grouped Menu Items (without Core Operations)
+  // Agency Module Menu Items - Only Properties is grouped
   const agencyGroups: MenuGroup[] = [
     {
-      id: 'property',
-      label: 'Property Management',
+      id: 'properties',
+      label: 'Properties',
       icon: Building,
       items: [
-        { id: 'properties', label: 'Properties' },
         { id: 'sell-cycles', label: 'Sell Cycles' },
         { id: 'purchase-cycles', label: 'Purchase Cycles' },
         { id: 'rent-cycles', label: 'Rent Cycles' },
-      ]
-    },
-    {
-      id: 'deals',
-      label: 'Deal Pipeline',
-      icon: FileCheck,
-      items: [
         { id: 'deals', label: 'Deal Management' },
-        { id: 'buyer-requirements', label: 'Buyer Requirements' },
-        { id: 'rent-requirements', label: 'Rent Requirements' },
-      ]
-    },
-    {
-      id: 'relationships',
-      label: 'Relationships',
-      icon: Users,
-      items: [
-        { id: 'leads', label: 'Leads' },
-        { id: 'contacts', label: 'Contacts' },
-      ]
-    },
-    {
-      id: 'financials',
-      label: 'Financials & Reporting',
-      icon: DollarSign,
-      items: [
-        { id: 'financials', label: 'Financials' },
-        { id: 'portfolio', label: 'Portfolio Management' },
-        { id: 'agency', label: 'Performance' },
-        { id: 'reports', label: 'Reports' },
-      ]
-    },
-    {
-      id: 'resources',
-      label: 'Resources',
-      icon: FileText,
-      items: [
-        { id: 'documents', label: 'Documents' },
       ]
     }
+  ];
+
+  // Standalone menu items with icons (not grouped)
+  const agencyStandaloneItems: MenuItem[] = [
+    { id: 'buyer-requirements', label: 'Buyer Requirements', icon: UserSearch },
+    { id: 'rent-requirements', label: 'Rent Requirements', icon: Home },
+    { id: 'leads', label: 'Leads', icon: Target },
+    { id: 'contacts', label: 'Contacts', icon: ContactRound },
+  ];
+
+  const agencyFinancialItems: MenuItem[] = [
+    { id: 'financials', label: 'Financials', icon: DollarSign },
+    { id: 'portfolio', label: 'Portfolio Management', icon: Briefcase },
+    { id: 'agency', label: 'Performance', icon: TrendingUp },
+  ];
+
+  const agencyReportItems: MenuItem[] = [
+    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'documents', label: 'Documents', icon: FileText },
   ];
 
   // Developers Module Grouped Menu Items (without Core Operations)
@@ -170,7 +165,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
     }
   ];
 
-  // Get menu groups based on current module
+  // Get menu structure based on current module
   const getMenuGroups = (): MenuGroup[] => {
     if (currentModule === 'agency') {
       return agencyGroups;
@@ -219,11 +214,35 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
     ];
   };
 
+  const getStandaloneItems = (): MenuItem[] => {
+    if (currentModule === 'agency') {
+      return agencyStandaloneItems;
+    }
+    return [];
+  };
+
+  const getFinancialItems = (): MenuItem[] => {
+    if (currentModule === 'agency') {
+      return agencyFinancialItems;
+    }
+    return [];
+  };
+
+  const getReportItems = (): MenuItem[] => {
+    if (currentModule === 'agency') {
+      return agencyReportItems;
+    }
+    return [];
+  };
+
   const menuGroups = getMenuGroups();
+  const standaloneItems = getStandaloneItems();
+  const financialItems = getFinancialItems();
+  const reportItems = getReportItems();
 
   // Get quick action buttons based on module
-  const getQuickActions = () => {
-    const actions = [];
+  const getQuickActions = (): QuickAction[] => {
+    const actions: QuickAction[] = [];
     
     if (currentModule === 'agency') {
       actions.push(
@@ -367,20 +386,36 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
         {/* Navigation Menu - Expanded (Always Open Groups) */}
         {!isCollapsed && (
           <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-            <ul className="space-y-3">
-              {menuGroups.map((group) => {
+            <ul className="space-y-1">
+              {/* Render grouped items (Properties) */}
+              {menuGroups.map((group, index) => {
                 const GroupIcon = group.icon;
+                const isGroupActive = activeTab === group.id;
                 
                 return (
                   <li key={group.id}>
-                    {/* Group Header - Non-clickable, just a label */}
-                    <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      <GroupIcon className="h-4 w-4" />
-                      <span>{group.label}</span>
-                    </div>
+                    {/* Add separator before group */}
+                    {group.id === 'properties' && (
+                      <div className="border-t border-gray-200 my-2 mx-2"></div>
+                    )}
                     
-                    {/* Group Items - Always visible */}
-                    <ul className="mt-1 space-y-0.5 pl-6">
+                    {/* Group Header - Clickable as main link */}
+                    <Button
+                      variant={isGroupActive ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start font-medium mb-1",
+                        isGroupActive && currentModule === 'agency' && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                        isGroupActive && currentModule === 'developers' && "bg-purple-50 text-purple-700 hover:bg-purple-100",
+                        isGroupActive && !currentModule && "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      )}
+                      onClick={() => onTabChange(group.id)}
+                    >
+                      <GroupIcon className="h-4 w-4 mr-3" />
+                      <span>{group.label}</span>
+                    </Button>
+                    
+                    {/* Group Items - Always visible, indented */}
+                    <ul className="space-y-0.5 pl-7 border-l-2 border-gray-200 ml-2">
                       {group.items.map((item) => (
                         <li key={item.id}>
                           {renderNavItem(item, false, false)}
@@ -390,6 +425,42 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                   </li>
                 );
               })}
+
+              {/* Standalone Items (Requirements & Relationships section) */}
+              {standaloneItems.length > 0 && (
+                <>
+                  <div className="border-t border-gray-200 my-2 mx-2"></div>
+                  {standaloneItems.map((item) => (
+                    <li key={item.id}>
+                      {renderNavItem(item, false, true)}
+                    </li>
+                  ))}
+                </>
+              )}
+
+              {/* Financial Items */}
+              {financialItems.length > 0 && (
+                <>
+                  <div className="border-t border-gray-200 my-2 mx-2"></div>
+                  {financialItems.map((item) => (
+                    <li key={item.id}>
+                      {renderNavItem(item, false, true)}
+                    </li>
+                  ))}
+                </>
+              )}
+
+              {/* Report Items */}
+              {reportItems.length > 0 && (
+                <>
+                  <div className="border-t border-gray-200 my-2 mx-2"></div>
+                  {reportItems.map((item) => (
+                    <li key={item.id}>
+                      {renderNavItem(item, false, true)}
+                    </li>
+                  ))}
+                </>
+              )}
             </ul>
           </nav>
         )}
@@ -397,40 +468,66 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
         {/* Navigation Menu - Collapsed (Icon Only) */}
         {isCollapsed && (
           <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
-            <ul className="space-y-2">
+            <ul className="space-y-1">
+              {/* Render grouped items (Properties with dropdown) */}
               {menuGroups.map((group) => {
                 const GroupIcon = group.icon;
+                const isGroupActive = activeTab === group.id;
                 
                 return (
                   <li key={group.id}>
-                    {/* Group Icon with Flyout */}
+                    {/* Group Icon with Flyout on Hover */}
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
                         <div className="w-full">
                           <Button
-                            variant="ghost"
+                            variant={isGroupActive ? "secondary" : "ghost"}
                             size="icon"
-                            className="w-full mb-1 hover:bg-gray-100"
+                            className={cn(
+                              "w-full",
+                              isGroupActive && currentModule === 'agency' && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                              isGroupActive && currentModule === 'developers' && "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                            )}
+                            onClick={() => onTabChange(group.id)}
                           >
-                            <GroupIcon className="h-4 w-4 text-gray-500" />
+                            <GroupIcon className="h-4 w-4" />
                           </Button>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent side="right" className="p-3 bg-white border shadow-lg">
-                        <div className="space-y-1 min-w-[180px]">
-                          <p className="text-xs font-medium text-gray-500 uppercase mb-2">{group.label}</p>
+                      <TooltipContent side="right" className="p-2 bg-white border shadow-lg">
+                        <div className="space-y-1 min-w-[200px]">
+                          {/* Group Label as Header */}
+                          <button
+                            className={cn(
+                              "w-full flex items-center px-3 py-2 text-sm font-medium rounded transition-colors text-left",
+                              isGroupActive 
+                                ? currentModule === 'agency' 
+                                  ? "bg-blue-50 text-blue-700 hover:bg-blue-100" 
+                                  : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                                : "hover:bg-gray-100 text-gray-700"
+                            )}
+                            onClick={() => onTabChange(group.id)}
+                          >
+                            <GroupIcon className="h-4 w-4 mr-2" />
+                            <span>{group.label}</span>
+                          </button>
+                          
+                          {/* Divider */}
+                          <div className="border-t border-gray-200 my-1"></div>
+                          
+                          {/* Sub-items */}
                           {group.items.map((item) => {
                             const isActive = activeTab === item.id;
                             return (
                               <button
                                 key={item.id}
                                 className={cn(
-                                  "w-full flex items-start px-2 py-1.5 text-sm rounded transition-colors text-left",
+                                  "w-full flex items-start px-3 py-1.5 text-sm rounded transition-colors text-left",
                                   isActive 
                                     ? currentModule === 'agency' 
                                       ? "bg-blue-50 text-blue-700 hover:bg-blue-100" 
                                       : "bg-purple-50 text-purple-700 hover:bg-purple-100"
-                                    : "hover:bg-gray-100 text-gray-700"
+                                    : "hover:bg-gray-100 text-gray-600"
                                 )}
                                 onClick={() => onTabChange(item.id)}
                               >
@@ -444,6 +541,105 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(({
                   </li>
                 );
               })}
+
+              {/* Standalone Items (with simple tooltip) */}
+              {standaloneItems.length > 0 && (
+                <>
+                  {standaloneItems.map((item) => {
+                    const ItemIcon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <li key={item.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={isActive ? "secondary" : "ghost"}
+                              size="icon"
+                              className={cn(
+                                "w-full",
+                                isActive && currentModule === 'agency' && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                                isActive && currentModule === 'developers' && "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                              )}
+                              onClick={() => onTabChange(item.id)}
+                            >
+                              {ItemIcon && <ItemIcon className="h-4 w-4" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{item.label}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </li>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Financial Items */}
+              {financialItems.length > 0 && (
+                <>
+                  {financialItems.map((item) => {
+                    const ItemIcon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <li key={item.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={isActive ? "secondary" : "ghost"}
+                              size="icon"
+                              className={cn(
+                                "w-full",
+                                isActive && currentModule === 'agency' && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                                isActive && currentModule === 'developers' && "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                              )}
+                              onClick={() => onTabChange(item.id)}
+                            >
+                              {ItemIcon && <ItemIcon className="h-4 w-4" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{item.label}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </li>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Report Items */}
+              {reportItems.length > 0 && (
+                <>
+                  {reportItems.map((item) => {
+                    const ItemIcon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <li key={item.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={isActive ? "secondary" : "ghost"}
+                              size="icon"
+                              className={cn(
+                                "w-full",
+                                isActive && currentModule === 'agency' && "bg-blue-50 text-blue-700 hover:bg-blue-100",
+                                isActive && currentModule === 'developers' && "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                              )}
+                              onClick={() => onTabChange(item.id)}
+                            >
+                              {ItemIcon && <ItemIcon className="h-4 w-4" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{item.label}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </li>
+                    );
+                  })}
+                </>
+              )}
             </ul>
           </nav>
         )}
