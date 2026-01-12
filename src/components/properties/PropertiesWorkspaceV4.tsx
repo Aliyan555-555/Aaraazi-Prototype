@@ -28,13 +28,14 @@ import {
   MapPin,
   Ruler,
   DollarSign,
+  Zap,
   // ... existing code ... 
 } from 'lucide-react';
 import { User, Property } from '../../types';
 import { WorkspacePageTemplate } from '../workspace/WorkspacePageTemplate';
 import { PropertyWorkspaceCard } from './PropertyWorkspaceCard';
 import { StatusBadge } from '../layout/StatusBadge'; // PHASE 5: Add StatusBadge import
-import { getProperties, deleteProperty, updateProperty, getAllAgents } from '../../lib/data';
+import { getProperties, deleteProperty, updateProperty, getAllAgents, addProperty, getContacts } from '../../lib/data';
 import { formatPropertyAddress } from '../../lib/utils';
 import { exportPropertiesToCSV } from '../../lib/exportUtils';
 import {
@@ -347,6 +348,142 @@ export const PropertiesWorkspaceV4: React.FC<PropertiesWorkspaceV4Props> = ({
     return sorted;
   }, []);
 
+  // Generate random property data
+  const generateRandomProperty = useCallback(() => {
+    // Random data arrays
+    const propertyTypes = ['house', 'apartment', 'plot', 'commercial', 'land'] as const;
+    const areaUnits = ['sqft', 'sqyards', 'marla', 'kanal'] as const;
+    const cities = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad'];
+    const areas = ['DHA Phase 5', 'Clifton', 'Gulshan', 'Bahria Town', 'Model Town', 'Saddar', 'Defence'];
+    const streets = ['Street 1', 'Street 5', 'Street 10', 'Main Boulevard', 'Park Road', 'Commercial Avenue'];
+    const ownerTypes = ['client', 'agency', 'investor'] as const;
+    
+    // Get random contact for owner or create a default
+    const contacts = getContacts(user.role === 'admin' ? undefined : user.id, user.role);
+    let ownerId = `owner_${Date.now()}`;
+    let ownerName = 'Random Owner';
+    let ownerType: 'client' | 'agency' | 'investor' = ownerTypes[Math.floor(Math.random() * ownerTypes.length)];
+    
+    if (contacts.length > 0) {
+      const randomContact = contacts[Math.floor(Math.random() * contacts.length)];
+      ownerId = randomContact.id;
+      ownerName = randomContact.name;
+      // Try to infer owner type from contact type
+      if (randomContact.type === 'investor') ownerType = 'investor';
+      else if (randomContact.type === 'corporate') ownerType = 'agency';
+      else ownerType = 'client';
+    }
+    
+    // Generate random property details
+    const propertyType = propertyTypes[Math.floor(Math.random() * propertyTypes.length)];
+    const areaUnit = areaUnits[Math.floor(Math.random() * areaUnits.length)];
+    
+    // Area based on property type and unit
+    let area = 0;
+    if (propertyType === 'plot' || propertyType === 'land') {
+      area = areaUnit === 'marla' ? Math.floor(Math.random() * 20) + 5 : // 5-25 marla
+             areaUnit === 'kanal' ? Math.floor(Math.random() * 5) + 1 : // 1-6 kanal
+             areaUnit === 'sqyards' ? Math.floor(Math.random() * 1000) + 500 : // 500-1500 sq yards
+             Math.floor(Math.random() * 9000) + 4500; // 4500-13500 sqft
+    } else {
+      area = areaUnit === 'marla' ? Math.floor(Math.random() * 15) + 5 : // 5-20 marla
+             areaUnit === 'kanal' ? Math.floor(Math.random() * 2) + 1 : // 1-3 kanal
+             areaUnit === 'sqyards' ? Math.floor(Math.random() * 600) + 200 : // 200-800 sq yards
+             Math.floor(Math.random() * 5400) + 1800; // 1800-7200 sqft
+    }
+    
+    // Bedrooms and bathrooms (only for house/apartment)
+    const bedrooms = (propertyType === 'house' || propertyType === 'apartment') 
+      ? Math.floor(Math.random() * 4) + 2 // 2-5 bedrooms
+      : undefined;
+    const bathrooms = bedrooms 
+      ? Math.floor(Math.random() * (bedrooms - 1)) + 1 // 1 to bedrooms-1
+      : undefined;
+    
+    // Generate address
+    const city = cities[Math.floor(Math.random() * cities.length)];
+    const areaName = areas[Math.floor(Math.random() * areas.length)];
+    const street = streets[Math.floor(Math.random() * streets.length)];
+    const houseNumber = Math.floor(Math.random() * 200) + 1;
+    const address = `${houseNumber} ${street}, ${areaName}, ${city}`;
+    
+    // Generate description
+    const descriptions = [
+      `Beautiful ${propertyType} in prime location`,
+      `Well-maintained ${propertyType} with modern amenities`,
+      `Spacious ${propertyType} perfect for families`,
+      `Luxury ${propertyType} with excellent views`,
+      `Affordable ${propertyType} in growing area`,
+    ];
+    const description = descriptions[Math.floor(Math.random() * descriptions.length)];
+    
+    // Features
+    const allFeatures = ['Parking', 'Garden', 'Security', 'Elevator', 'Gym', 'Pool', 'Balcony', 'Terrace'];
+    const numFeatures = Math.floor(Math.random() * 4) + 1; // 1-4 features
+    const features = allFeatures.sort(() => 0.5 - Math.random()).slice(0, numFeatures);
+    
+    // Create property data (using any to support extended Property type)
+    const propertyData: any = {
+      // Physical details
+      address: address,
+      propertyType: propertyType,
+      area: area,
+      areaUnit: areaUnit,
+      bedrooms: bedrooms,
+      bathrooms: bathrooms,
+      features: features,
+      description: description,
+      images: [],
+      
+      // Ownership
+      currentOwnerId: ownerId,
+      currentOwnerName: ownerName,
+      currentOwnerType: ownerType,
+      ownershipHistory: [
+        {
+          ownerId: ownerId,
+          ownerName: ownerName,
+          acquiredDate: new Date().toISOString().split('T')[0],
+          notes: 'Initial owner',
+        },
+      ],
+      
+      // V3.0: Empty cycle arrays (cycles added separately!)
+      activeSellCycleIds: [],
+      activePurchaseCycleIds: [],
+      activeRentCycleIds: [],
+      
+      // Status (computed)
+      currentStatus: 'No Active Cycle',
+      
+      // History
+      cycleHistory: {
+        sellCycles: [],
+        purchaseCycles: [],
+        rentCycles: [],
+      },
+      transactionIds: [],
+      
+      // Sharing
+      createdBy: user.id,
+      sharedWith: [],
+      isInternalListing: false,
+    };
+
+    // Add the property
+    try {
+      addProperty(propertyData as Omit<Property, 'id' | 'createdAt' | 'updatedAt'>);
+      toast.success(`Quick property added: ${address}`);
+      // Refresh the page to show the new property
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Error adding quick property:', error);
+      toast.error('Failed to add quick property');
+    }
+  }, [user.id, user.role]);
+
   return (
     <>
       <WorkspacePageTemplate
@@ -361,6 +498,15 @@ export const PropertiesWorkspaceV4: React.FC<PropertiesWorkspaceV4Props> = ({
           icon: <Plus className="h-4 w-4" />,
           onClick: onAddProperty || (() => toast.info('Add Property clicked')),
         }}
+
+        // Secondary Actions
+        secondaryActions={[
+          {
+            label: 'Quick Property',
+            icon: <Zap className="h-4 w-4" />,
+            onClick: generateRandomProperty,
+          },
+        ]}
 
         // Data
         items={allProperties}

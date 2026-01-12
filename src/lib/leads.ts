@@ -521,7 +521,7 @@ export function recalculateLeadScore(leadId: string): Lead {
 /**
  * Update SLA tracking based on lead status changes
  */
-function updateSLATracking(lead: Lead): LeadSLA {
+export function updateSLATracking(lead: Lead): LeadSLA {
   const now = new Date().toISOString();
   const settings = getLeadSettings();
   const sla = { ...lead.sla };
