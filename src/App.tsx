@@ -515,6 +515,22 @@ function App() {
     setSelectedProject(null);
   }, []);
 
+  // Financial Hub Navigation Handlers
+  const handleViewDeal = React.useCallback((dealId: string) => {
+    sessionStorage.setItem('selected_deal_id', dealId);
+    setActiveTab('deal-details');
+  }, []);
+
+  const handleViewProperty = React.useCallback((propertyId: string) => {
+    const property = getPropertyById(propertyId);
+    if (property) {
+      setSelectedProperty(property);
+      setActiveTab('property-detail');
+    } else {
+      toast.error('Property not found');
+    }
+  }, []);
+
   // Notification Navigation Handlers
   const handleOpenNotificationCenter = React.useCallback(() => {
     setActiveTab('notifications');
@@ -1444,10 +1460,15 @@ function App() {
         );
       
       case 'financials':
-        return <FinancialsHubV4 user={user} onNavigate={(module) => {
-          console.log('Navigate to financial module:', module);
-          // TODO: Add module-specific routing once workspaces are created
-        }} />;
+        return <FinancialsHubV4 
+          user={user} 
+          onNavigate={(module) => {
+            // Module navigation handled internally by FinancialsHubV4
+            console.log('Financial module activated:', module);
+          }}
+          onViewDeal={handleViewDeal}
+          onViewProperty={handleViewProperty}
+        />;
       
       case 'agency':
         return <AgencyHub user={user} />;
