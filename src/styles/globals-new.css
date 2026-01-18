@@ -1,0 +1,657 @@
+/**
+ * aaraazi Design System v2.0
+ * Brand Colors: Terracotta, Forest Green, Warm Cream, Slate
+ * Typography: Inter
+ * Color Ratio: 60% Neutral, 30% Secondary, 10% Accent
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+/* Import Inter Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* ========================================
+     TYPOGRAPHY
+     ======================================== */
+  
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  --font-size: 14px;
+  
+  /* Font Sizes */
+  --text-xs: 0.75rem;      /* 10.5px */
+  --text-sm: 0.875rem;     /* 12.25px */
+  --text-base: 1rem;       /* 14px */
+  --text-md: 1.125rem;     /* 15.75px */
+  --text-lg: 1.25rem;      /* 17.5px */
+  --text-xl: 1.5rem;       /* 21px */
+  --text-2xl: 1.875rem;    /* 26.25px */
+  --text-3xl: 2.25rem;     /* 31.5px */
+  --text-4xl: 3rem;        /* 42px */
+  
+  /* Font Weights */
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+  
+  /* Letter Spacing */
+  --tracking-tighter: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.01em;
+  --tracking-wider: 0.025em;
+  
+  /* ========================================
+     NEUTRAL COLORS (60% - Backgrounds & Space)
+     ======================================== */
+  
+  --neutral-0: #FFFFFF;
+  --neutral-50: #FAFAF9;
+  --neutral-100: #F5F4F1;
+  --neutral-200: #E8E2D5;    /* Warm Cream - Brand Color */
+  --neutral-300: #D4CFC3;
+  --neutral-400: #B8B3A8;
+  --neutral-500: #8C8780;
+  
+  /* ========================================
+     SLATE COLORS (30% - Text & UI Elements)
+     ======================================== */
+  
+  --slate-50: #F8F9FA;
+  --slate-100: #E2E5E8;
+  --slate-200: #C5CBD1;
+  --slate-300: #A8B1BA;
+  --slate-400: #6B7580;
+  --slate-500: #363F47;      /* Slate - Brand Color */
+  --slate-600: #2D353C;
+  --slate-700: #1A1D1F;      /* Charcoal - Brand Color */
+  
+  /* ========================================
+     TERRACOTTA ACCENT (10% - Primary CTAs)
+     ======================================== */
+  
+  --terracotta-50: #FDF5F2;
+  --terracotta-100: #F9E6DD;
+  --terracotta-200: #E9C4B0;
+  --terracotta-300: #D99A7E;
+  --terracotta-400: #C17052;  /* Terracotta - Brand Color (PRIMARY) */
+  --terracotta-500: #A85D42;
+  --terracotta-600: #8F4A33;
+  --terracotta-700: #6D3825;
+  
+  /* ========================================
+     FOREST GREEN ACCENT (Success & Growth)
+     ======================================== */
+  
+  --forest-50: #F2F7F5;
+  --forest-100: #DFF0E9;
+  --forest-200: #B3D9C8;
+  --forest-300: #7AB89D;
+  --forest-400: #2D6A54;     /* Forest Green - Brand Color (SUCCESS) */
+  --forest-500: #255745;
+  --forest-600: #1E4637;
+  --forest-700: #163529;
+  
+  /* ========================================
+     FUNCTIONAL COLORS
+     ======================================== */
+  
+  --warning-50: #FEF3C7;
+  --warning-100: #FDE68A;
+  --warning: #F59E0B;
+  --warning-600: #D97706;
+  
+  --error-50: #FEE2E2;
+  --error-100: #FECACA;
+  --error: #DC2626;
+  --error-600: #B91C1C;
+  
+  --info-50: #DBEAFE;
+  --info-100: #BFDBFE;
+  --info: #3B82F6;
+  --info-600: #2563EB;
+  
+  /* ========================================
+     SEMANTIC COLOR MAPPINGS
+     ======================================== */
+  
+  /* Backgrounds */
+  --background: var(--neutral-0);
+  --foreground: var(--slate-700);
+  
+  /* Cards & Panels */
+  --card: var(--neutral-0);
+  --card-foreground: var(--slate-700);
+  
+  /* Popovers & Dropdowns */
+  --popover: var(--neutral-0);
+  --popover-foreground: var(--slate-700);
+  
+  /* Primary Actions (Terracotta) */
+  --primary: var(--terracotta-400);
+  --primary-foreground: var(--neutral-0);
+  --primary-hover: var(--terracotta-500);
+  --primary-active: var(--terracotta-600);
+  
+  /* Secondary Actions (Slate) */
+  --secondary: var(--slate-100);
+  --secondary-foreground: var(--slate-700);
+  --secondary-hover: var(--slate-200);
+  --secondary-active: var(--slate-300);
+  
+  /* Muted/Subtle Elements */
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--slate-400);
+  
+  /* Accent/Highlighted Elements */
+  --accent: var(--neutral-200);
+  --accent-foreground: var(--slate-600);
+  
+  /* Success States (Forest Green) */
+  --success: var(--forest-400);
+  --success-foreground: var(--neutral-0);
+  --success-bg: var(--forest-50);
+  --success-border: var(--forest-200);
+  
+  /* Destructive/Error States */
+  --destructive: var(--error);
+  --destructive-foreground: var(--neutral-0);
+  --destructive-bg: var(--error-50);
+  --destructive-border: var(--error-100);
+  
+  /* Warning States */
+  --warning-bg: var(--warning-50);
+  --warning-foreground: var(--warning-600);
+  --warning-border: var(--warning-100);
+  
+  /* Info States */
+  --info-bg: var(--info-50);
+  --info-foreground: var(--info-600);
+  --info-border: var(--info-100);
+  
+  /* Borders */
+  --border: var(--neutral-300);
+  --border-light: var(--neutral-200);
+  --border-strong: var(--slate-200);
+  
+  /* Inputs */
+  --input: transparent;
+  --input-background: var(--neutral-100);
+  --input-border: var(--neutral-300);
+  --input-border-hover: var(--slate-300);
+  --input-border-focus: var(--terracotta-400);
+  
+  /* Switch/Toggle */
+  --switch-background: var(--neutral-300);
+  --switch-checked: var(--terracotta-400);
+  
+  /* Focus Ring */
+  --ring: var(--terracotta-400);
+  
+  /* ========================================
+     CHART COLORS
+     ======================================== */
+  
+  --chart-1: var(--terracotta-400);   /* Primary data */
+  --chart-2: var(--forest-400);       /* Secondary/positive data */
+  --chart-3: var(--warning);          /* Warning/caution data */
+  --chart-4: var(--slate-400);        /* Neutral data */
+  --chart-5: var(--terracotta-300);   /* Light accent */
+  --chart-6: var(--forest-300);       /* Light positive */
+  
+  /* ========================================
+     SPACING (Increased for more negative space)
+     ======================================== */
+  
+  --space-0: 0;
+  --space-1: 0.25rem;     /* 3.5px */
+  --space-2: 0.5rem;      /* 7px */
+  --space-3: 0.75rem;     /* 10.5px */
+  --space-4: 1rem;        /* 14px */
+  --space-5: 1.25rem;     /* 17.5px */
+  --space-6: 1.5rem;      /* 21px */
+  --space-8: 2rem;        /* 28px */
+  --space-10: 2.5rem;     /* 35px */
+  --space-12: 3rem;       /* 42px */
+  --space-16: 4rem;       /* 56px */
+  --space-20: 5rem;       /* 70px */
+  --space-24: 6rem;       /* 84px */
+  
+  /* Container Padding */
+  --container-padding-sm: 1.5rem;   /* 21px - mobile */
+  --container-padding-md: 2rem;     /* 28px - tablet */
+  --container-padding-lg: 3rem;     /* 42px - desktop */
+  
+  /* Section Gaps */
+  --section-gap-sm: 2rem;    /* 28px */
+  --section-gap-md: 3rem;    /* 42px */
+  --section-gap-lg: 4rem;    /* 56px */
+  
+  /* ========================================
+     BORDER RADIUS
+     ======================================== */
+  
+  --radius-sm: 0.375rem;   /* 5.25px */
+  --radius-md: 0.5rem;     /* 7px */
+  --radius-lg: 0.625rem;   /* 8.75px */
+  --radius-xl: 0.875rem;   /* 12.25px */
+  --radius-2xl: 1rem;      /* 14px */
+  --radius-full: 9999px;
+  
+  /* Legacy support */
+  --radius: var(--radius-lg);
+  
+  /* ========================================
+     SHADOWS (Subtle & Soft)
+     ======================================== */
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.09), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  
+  /* ========================================
+     SIDEBAR SPECIFIC
+     ======================================== */
+  
+  --sidebar: var(--neutral-0);
+  --sidebar-foreground: var(--slate-600);
+  --sidebar-primary: var(--terracotta-400);
+  --sidebar-primary-foreground: var(--neutral-0);
+  --sidebar-accent: var(--neutral-100);
+  --sidebar-accent-foreground: var(--slate-700);
+  --sidebar-border: var(--neutral-200);
+  --sidebar-ring: var(--terracotta-400);
+  
+  /* ========================================
+     LEGACY FONT WEIGHT SUPPORT
+     ======================================== */
+  
+  --font-weight-light: var(--font-light);
+  --font-weight-normal: var(--font-normal);
+  --font-weight-medium: var(--font-medium);
+  --font-weight-semibold: var(--font-semibold);
+  --font-weight-bold: var(--font-bold);
+}
+
+/* ========================================
+   DARK MODE (Optional - not primary focus)
+   ======================================== */
+
+.dark {
+  --background: var(--slate-700);
+  --foreground: var(--neutral-50);
+  
+  --card: var(--slate-600);
+  --card-foreground: var(--neutral-50);
+  
+  --popover: var(--slate-600);
+  --popover-foreground: var(--neutral-50);
+  
+  --primary: var(--terracotta-400);
+  --primary-foreground: var(--neutral-0);
+  
+  --secondary: var(--slate-500);
+  --secondary-foreground: var(--neutral-50);
+  
+  --muted: var(--slate-500);
+  --muted-foreground: var(--slate-300);
+  
+  --accent: var(--slate-500);
+  --accent-foreground: var(--neutral-50);
+  
+  --success: var(--forest-400);
+  --success-foreground: var(--neutral-0);
+  
+  --destructive: var(--error);
+  --destructive-foreground: var(--neutral-0);
+  
+  --border: var(--slate-500);
+  --input: var(--slate-500);
+  --input-background: var(--slate-600);
+  
+  --ring: var(--terracotta-400);
+  
+  --sidebar: var(--slate-600);
+  --sidebar-foreground: var(--neutral-50);
+  --sidebar-primary: var(--terracotta-400);
+  --sidebar-primary-foreground: var(--neutral-0);
+  --sidebar-accent: var(--slate-500);
+  --sidebar-accent-foreground: var(--neutral-50);
+  --sidebar-border: var(--slate-500);
+  --sidebar-ring: var(--terracotta-400);
+}
+
+/* ========================================
+   TAILWIND THEME INTEGRATION
+   ======================================== */
+
+@theme inline {
+  /* Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-bg: var(--success-bg);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-bg: var(--destructive-bg);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-bg: var(--warning-bg);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-bg: var(--info-bg);
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-input-border: var(--input-border);
+  --color-input-border-focus: var(--input-border-focus);
+  --color-switch-background: var(--switch-background);
+  --color-switch-checked: var(--switch-checked);
+  --color-ring: var(--ring);
+  
+  /* Chart Colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Neutral Palette */
+  --color-neutral-0: var(--neutral-0);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  
+  /* Slate Palette */
+  --color-slate-50: var(--slate-50);
+  --color-slate-100: var(--slate-100);
+  --color-slate-200: var(--slate-200);
+  --color-slate-300: var(--slate-300);
+  --color-slate-400: var(--slate-400);
+  --color-slate-500: var(--slate-500);
+  --color-slate-600: var(--slate-600);
+  --color-slate-700: var(--slate-700);
+  
+  /* Terracotta Palette */
+  --color-terracotta-50: var(--terracotta-50);
+  --color-terracotta-100: var(--terracotta-100);
+  --color-terracotta-200: var(--terracotta-200);
+  --color-terracotta-300: var(--terracotta-300);
+  --color-terracotta-400: var(--terracotta-400);
+  --color-terracotta-500: var(--terracotta-500);
+  --color-terracotta-600: var(--terracotta-600);
+  --color-terracotta-700: var(--terracotta-700);
+  
+  /* Forest Palette */
+  --color-forest-50: var(--forest-50);
+  --color-forest-100: var(--forest-100);
+  --color-forest-200: var(--forest-200);
+  --color-forest-300: var(--forest-300);
+  --color-forest-400: var(--forest-400);
+  --color-forest-500: var(--forest-500);
+  --color-forest-600: var(--forest-600);
+  --color-forest-700: var(--forest-700);
+}
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-gray-300 {
+    scrollbar-color: var(--neutral-300) transparent;
+  }
+
+  .scrollbar-track-transparent {
+    scrollbar-color: inherit transparent;
+  }
+
+  /* Webkit scrollbar styles */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--neutral-300);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background-color: var(--neutral-400);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--slate-300);
+  }
+}
+
+/* ========================================
+   TYPOGRAPHY STYLES
+   Base typography - not applied when Tailwind text classes are used
+   ======================================== */
+
+@layer base {
+  :where(:not(:has([class*=" text-"])):not(:has([class^="text-"]))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-semibold);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-tight);
+      color: var(--slate-700);
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-semibold);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-tight);
+      color: var(--slate-700);
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-semibold);
+      line-height: var(--leading-snug);
+      color: var(--slate-700);
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-semibold);
+      line-height: var(--leading-snug);
+      color: var(--slate-700);
+    }
+
+    h5 {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      line-height: var(--leading-snug);
+      color: var(--slate-600);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-normal);
+      line-height: var(--leading-normal);
+      color: var(--slate-600);
+    }
+
+    label {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      line-height: var(--leading-snug);
+      color: var(--slate-700);
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-medium);
+      line-height: var(--leading-snug);
+      letter-spacing: var(--tracking-normal);
+    }
+
+    input, textarea, select {
+      font-size: var(--text-base);
+      font-weight: var(--font-normal);
+      line-height: var(--leading-normal);
+      color: var(--slate-700);
+    }
+
+    a {
+      color: var(--terracotta-500);
+      text-decoration: none;
+      transition: color 150ms ease;
+    }
+
+    a:hover {
+      color: var(--terracotta-600);
+      text-decoration: underline;
+    }
+
+    strong, b {
+      font-weight: var(--font-semibold);
+      color: var(--slate-700);
+    }
+
+    small {
+      font-size: var(--text-sm);
+      color: var(--slate-400);
+    }
+
+    code {
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+      font-size: 0.9em;
+      background-color: var(--neutral-100);
+      padding: 0.125rem 0.25rem;
+      border-radius: var(--radius-sm);
+      color: var(--slate-700);
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Kanban vertical text for collapsed columns */
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+/* Focus visible (better accessibility) */
+.focus-visible-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  .print\:block {
+    display: block !important;
+  }
+  
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+  
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+  
+  /* Force background colors for charts */
+  .print\:bg-white {
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

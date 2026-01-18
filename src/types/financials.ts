@@ -1,0 +1,91 @@
+/**
+ * Financial Management Types (Commissions, Expenses, Projects)
+ */
+
+export interface Commission {
+    id: string;
+    transactionId: string;
+    propertyId?: string;
+    agentId: string;
+    amount: number;
+    rate?: number;
+    status: 'pending' | 'partial' | 'paid' | 'cancelled';
+    paymentDate?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export type ExpenseCategory =
+    | 'office'
+    | 'marketing'
+    | 'salary'
+    | 'utilities'
+    | 'travel'
+    | 'maintenance'
+    | 'other'
+    | 'Salaries & Wages'
+    | 'Commission Revenue'
+    | 'Professional Fees'
+    | 'Marketing & Advertising'
+    | 'Office Expenses'
+    | 'Utilities'
+    | 'Transportation'
+    | 'Depreciation';
+
+export interface Expense {
+    id: string;
+    amount: number;
+    date: string;
+    category: ExpenseCategory;
+    description: string;
+    propertyId?: string;
+    status: 'pending' | 'paid' | 'cancelled';
+    createdAt: string;
+    updatedAt: string;
+    agentId?: string;
+
+    // Additional fields expected by complex accounting logic
+    deductible?: boolean;
+    vendor?: string;
+    dueDate?: string;
+    paymentMethod?: 'cash' | 'bank-transfer' | 'cheque' | 'online';
+}
+
+export interface Payment {
+    id: string;
+    amount: number;
+    date: string;
+    method: 'cash' | 'bank-transfer' | 'cheque' | 'online' | 'financing';
+    paymentMethod?: 'cash' | 'bank-transfer' | 'cheque' | 'online' | 'financing';
+    status: 'pending' | 'completed' | 'cancelled';
+    propertyId?: string;
+    transactionId?: string;
+    clientId?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Project {
+    id: string;
+    name: string;
+    description?: string;
+    location: string;
+    developerId: string;
+    status: 'planned' | 'in-progress' | 'completed' | 'cancelled';
+    totalUnits?: number;
+    soldUnits?: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface LandParcel {
+    id: string;
+    title: string;
+    location: string;
+    size: number;
+    sizeUnit: string;
+    status: 'available' | 'sold' | 'development';
+    price: number;
+    createdAt: string;
+    updatedAt: string;
+}
