@@ -93,7 +93,7 @@ import {
 // Phase 4D: Cross-agent matching functions
 import {
   findSharedMatchesForRentRequirement,
-  submitCrossAgentRentApplication,
+  submitCrossAgentRentApplicationFromMatch,
 } from '../lib/smartMatching';
 
 interface RentRequirementDetailsV4Props {
@@ -198,7 +198,13 @@ export function RentRequirementDetailsV4({
       // Show loading toast
       const loadingToast = toast.loading('Submitting application to shared property...');
       
-      submitCrossAgentRentApplication(match.rentCycleId, requirement.id);
+      submitCrossAgentRentApplicationFromMatch(
+        match.rentCycleId,
+        requirement.id,
+        user.id,
+        user.name || user.email || 'Unknown User',
+        user.contactNumber
+      );
       
       // Dismiss loading and show success
       toast.dismiss(loadingToast);
