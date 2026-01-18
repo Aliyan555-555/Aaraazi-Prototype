@@ -202,8 +202,8 @@ export function RentRequirementDetailsV4({
         match.rentCycleId,
         requirement.id,
         user.id,
-        user.name || user.email || 'Unknown User',
-        user.contactNumber
+        user.name || 'Unknown User',
+        user.contact
       );
       
       // Dismiss loading and show success
