@@ -507,7 +507,7 @@ export const WorkspacePageTemplate = React.memo(<T,>({
       )}
 
       {/* Main Content */}
-      <div className="p-6">
+      <div className={viewMode === 'kanban' ? 'px-6 pt-6 pb-0' : 'p-6'}>
         {!hasData ? (
           // No data at all - show empty state
           customEmptyState || (
@@ -552,15 +552,17 @@ export const WorkspacePageTemplate = React.memo(<T,>({
 
       {/* Footer with Pagination */}
       {hasResults && pagination.enabled && (
-        <WorkspaceFooter
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          pageSizeOptions={pagination.pageSizeOptions || [12, 24, 48, 96]}
-          totalItems={sortedItems.length}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        <div className={viewMode === 'kanban' ? 'px-6 pb-6' : ''}>
+          <WorkspaceFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            pageSizeOptions={pagination.pageSizeOptions || [12, 24, 48, 96]}
+            totalItems={sortedItems.length}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        </div>
       )}
     </div>
   );

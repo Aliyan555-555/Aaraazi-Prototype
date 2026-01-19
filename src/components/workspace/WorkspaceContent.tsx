@@ -362,15 +362,16 @@ const KanbanView = <T,>({
   });
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4">
-      {columns.map((column) => {
-        const columnItems = groupedItems.get(column.id) || [];
+    <div className="w-full overflow-x-auto pb-6">
+      <div className="flex gap-4 min-w-max px-1">
+        {columns.map((column) => {
+          const columnItems = groupedItems.get(column.id) || [];
 
-        return (
-          <div
-            key={column.id}
-            className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border border-gray-200"
-          >
+          return (
+            <div
+              key={column.id}
+              className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border border-gray-200"
+            >
             {/* Column Header */}
             <div className="p-4 border-b bg-white rounded-t-lg">
               <div className="flex items-center justify-between">
@@ -439,7 +440,8 @@ const KanbanView = <T,>({
             </div>
           </div>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 };

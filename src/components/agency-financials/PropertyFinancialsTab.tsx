@@ -5,7 +5,7 @@
  * Design System V4.1 Compliant
  */
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   DollarSign,
   TrendingUp,

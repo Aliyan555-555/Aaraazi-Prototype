@@ -3,7 +3,7 @@
  * Phase 2 Implementation - Individual investor's portfolio view
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { 
   ArrowLeft, 
   Building2, 
@@ -11,7 +11,6 @@ import {
   Wallet, 
   PieChart,
   Calendar,
-  MapPin,
   ExternalLink,
   Download,
   Filter,

@@ -108,7 +108,7 @@ export const BankReconciliationList: React.FC<BankReconciliationListProps> = ({
             <TableHead className="w-12">
               <Checkbox
                 checked={isAllSelected}
-                indeterminate={isSomeSelected}
+                {...(isSomeSelected ? { indeterminate: true } : {})}
                 onCheckedChange={handleSelectAll}
                 aria-label="Select all transactions"
               />

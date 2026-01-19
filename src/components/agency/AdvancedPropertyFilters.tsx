@@ -268,7 +268,7 @@ export function AdvancedPropertyFilters({
                 <Label className="text-xs text-gray-600">Listed in last</Label>
                 <Select
                   value={localFilters.listedInDays?.toString() || 'all'}
-                  onValueChange={(value) => updateFilter('listedInDays', value === 'all' ? undefined : parseInt(value))}
+                  onValueChange={(value:any) => updateFilter('listedInDays', value === 'all' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Any time" />
@@ -287,7 +287,7 @@ export function AdvancedPropertyFilters({
                 <Label className="text-xs text-gray-600">Last updated</Label>
                 <Select
                   value={localFilters.updatedInDays?.toString() || 'all'}
-                  onValueChange={(value) => updateFilter('updatedInDays', value === 'all' ? undefined : parseInt(value))}
+                  onValueChange={(value:any) => updateFilter('updatedInDays', value === 'all' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Any time" />
@@ -305,7 +305,7 @@ export function AdvancedPropertyFilters({
                 <Label className="text-xs text-gray-600">Expiring in</Label>
                 <Select
                   value={localFilters.expiringInDays?.toString() || 'all'}
-                  onValueChange={(value) => updateFilter('expiringInDays', value === 'all' ? undefined : parseInt(value))}
+                  onValueChange={(value:any) => updateFilter('expiringInDays', value === 'all' ? undefined : parseInt(value))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Any time" />
@@ -329,7 +329,7 @@ export function AdvancedPropertyFilters({
                 <Checkbox
                   id="no-offers"
                   checked={localFilters.hasNoOffers || false}
-                  onCheckedChange={(checked) => updateFilter('hasNoOffers', checked)}
+                  onCheckedChange={(checked:any) => updateFilter('hasNoOffers', checked)}
                 />
                 <Label htmlFor="no-offers" className="cursor-pointer">
                   Properties with no offers
@@ -340,7 +340,7 @@ export function AdvancedPropertyFilters({
                 <Checkbox
                   id="high-interest"
                   checked={localFilters.hasHighInterest || false}
-                  onCheckedChange={(checked) => updateFilter('hasHighInterest', checked)}
+                  onCheckedChange={(checked:any) => updateFilter('hasHighInterest', checked)}
                 />
                 <Label htmlFor="high-interest" className="cursor-pointer">
                   High interest (3+ leads)
@@ -351,7 +351,7 @@ export function AdvancedPropertyFilters({
                 <Checkbox
                   id="stale"
                   checked={localFilters.isStale || false}
-                  onCheckedChange={(checked) => updateFilter('isStale', checked)}
+                  onCheckedChange={(checked:any) => updateFilter('isStale', checked)}
                 />
                 <Label htmlFor="stale" className="cursor-pointer">
                   Stale listings (&gt;90 days on market)
@@ -384,7 +384,7 @@ export function AdvancedPropertyFilters({
             <Label className="font-medium">Acquisition Type</Label>
             <Select
               value={localFilters.acquisitionType || 'all'}
-              onValueChange={(value) => updateFilter('acquisitionType', value === 'all' ? undefined : value)}
+              onValueChange={(value:any) => updateFilter('acquisitionType', value === 'all' ? undefined : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="All types" />

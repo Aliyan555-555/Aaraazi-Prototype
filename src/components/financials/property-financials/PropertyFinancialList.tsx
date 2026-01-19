@@ -113,7 +113,7 @@ export const PropertyFinancialList: React.FC<PropertyFinancialListProps> = ({
             <TableHead className="w-12">
               <Checkbox
                 checked={isAllSelected}
-                indeterminate={isSomeSelected}
+                {...(isSomeSelected ? { indeterminate: true } : {})}
                 onCheckedChange={handleSelectAll}
                 aria-label="Select all properties"
               />

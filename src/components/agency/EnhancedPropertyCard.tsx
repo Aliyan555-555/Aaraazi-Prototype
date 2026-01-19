@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   MapPin,
-  Calendar,
   TrendingUp,
   TrendingDown,
   Users,
@@ -18,8 +17,6 @@ import {
   AlertCircle,
   Flame,
   Snowflake,
-  CheckCircle2,
-  XCircle,
   CheckSquare,
   Square,
   Sparkles

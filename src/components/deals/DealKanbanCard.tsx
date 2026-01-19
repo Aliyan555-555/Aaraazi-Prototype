@@ -57,59 +57,68 @@ export const DealKanbanCard: React.FC<DealKanbanCardProps> = ({
     priority = 'low';
   }
 
-  // Build tags
-  const tags: Array<{ label: string; variant: 'default' | 'success' | 'info' | 'warning' }> = [];
+  // Build tags (as strings for WorkspaceKanbanCard)
+  const tags: string[] = [];
   
   if (deal.cycles.purchaseCycle) {
-    tags.push({ label: 'Dual Agent', variant: 'info' });
+    tags.push('Dual Agent');
   }
   
   if (paymentProgress === 100) {
-    tags.push({ label: 'Paid', variant: 'success' });
+    tags.push('Paid');
   } else if (paymentProgress > 0) {
-    tags.push({ label: `${paymentProgress}% Paid`, variant: 'info' });
+    tags.push(`${paymentProgress}% Paid`);
   }
 
   if (daysToClosing < 0) {
-    tags.push({ label: 'Overdue', variant: 'warning' });
+    tags.push('Overdue');
   }
 
-  // Build metadata
-  const metadata = [
+  // Build metrics (for WorkspaceKanbanCard)
+  const metrics = [
     {
       icon: <DollarSign className="h-3.5 w-3.5" />,
-      label: formatPKR(deal.financial.agreedPrice),
+      label: 'Value',
+      value: formatPKR(deal.financial.agreedPrice),
     },
     {
       icon: <Users className="h-3.5 w-3.5" />,
-      label: deal.parties.buyer.name,
+      label: 'Buyer',
+      value: deal.parties.buyer.name,
     },
     {
       icon: <TrendingUp className="h-3.5 w-3.5" />,
-      label: `${paymentProgress}% paid`,
+      label: 'Paid',
+      value: `${paymentProgress}%`,
     },
   ];
 
   // Add closing date or overdue indicator
   if (daysToClosing >= 0) {
-    metadata.push({
+    metrics.push({
       icon: <Calendar className="h-3.5 w-3.5" />,
-      label: `${daysToClosing} days to close`,
+      label: 'Closing',
+      value: `${daysToClosing} days`,
     });
   } else {
-    metadata.push({
+    metrics.push({
       icon: <AlertCircle className="h-3.5 w-3.5" />,
-      label: `${Math.abs(daysToClosing)} days overdue`,
+      label: 'Overdue',
+      value: `${Math.abs(daysToClosing)} days`,
     });
   }
 
+  // Build title with buyer and value info
+  const title = `${deal.dealNumber} • ${deal.parties.buyer.name}`;
+
   return (
     <WorkspaceKanbanCard
-      title={deal.dealNumber}
-      subtitle={`${deal.parties.buyer.name} • ${formatPKR(deal.financial.agreedPrice)}`}
+      title={title}
+      reference={formatPKR(deal.financial.agreedPrice)}
       priority={priority}
       tags={tags.slice(0, 2)} // Max 2 tags for kanban
-      metadata={metadata.slice(0, 4)} // Max 4 metadata items
+      metrics={metrics.slice(0, 3)} // Max 3 metrics for kanban
+      progress={paymentProgress}
       onClick={onClick}
     />
   );

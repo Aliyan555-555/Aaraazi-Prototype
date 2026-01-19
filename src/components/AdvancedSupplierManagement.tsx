@@ -17,9 +17,7 @@ import {
   Download,
   Eye,
   Phone,
-  Mail,
   MapPin,
-  Calendar,
   Package,
   AlertTriangle
 } from 'lucide-react';
@@ -518,7 +516,7 @@ export const AdvancedSupplierManagement: React.FC<AdvancedSupplierManagementProp
                           <TableCell>
                             <Button
                               size="sm"
-                              onClick={(e) => {
+                              onClick={(e:any) => {
                                 e.stopPropagation();
                                 handleSupplierClick(supplier);
                               }}

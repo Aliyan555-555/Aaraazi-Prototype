@@ -317,7 +317,7 @@ export const LocationsManagement: React.FC<LocationsManagementProps> = ({ saasAd
       
       {/* Tabs */}
       <div className="p-6">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+        <Tabs value={activeTab} onValueChange={(v:any) => setActiveTab(v as TabType)}>
           <div className="flex items-center justify-between mb-6">
             <TabsList>
               <TabsTrigger value="cities" className="gap-2">
@@ -1382,7 +1382,7 @@ const BuildingDialog: React.FC<BuildingDialogProps> = ({
               <Label htmlFor="buildingArea">Area *</Label>
               <Select 
                 value={areaId || undefined} 
-                onValueChange={(value) => {
+                onValueChange={(value:any) => {
                   setAreaId(value);
                   setBlockId(''); // Reset block when area changes
                 }}
@@ -1417,7 +1417,7 @@ const BuildingDialog: React.FC<BuildingDialogProps> = ({
               <Label htmlFor="buildingBlock">Block (Optional)</Label>
               <Select 
                 value={blockId || undefined} 
-                onValueChange={(value) => setBlockId(value || '')} 
+                onValueChange={(value:any) => setBlockId(value || '')} 
                 disabled={!areaId}
               >
                 <SelectTrigger>
@@ -1457,7 +1457,7 @@ const BuildingDialog: React.FC<BuildingDialogProps> = ({
             
             <div>
               <Label htmlFor="buildingType">Building Type *</Label>
-              <Select value={type} onValueChange={(v) => setType(v as any)}>
+              <Select value={type} onValueChange={(v:any) => setType(v as any)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

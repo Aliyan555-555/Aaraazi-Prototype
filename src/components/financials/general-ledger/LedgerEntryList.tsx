@@ -125,7 +125,7 @@ export const LedgerEntryList: React.FC<LedgerEntryListProps> = ({
             <TableHead className="w-12">
               <Checkbox
                 checked={isAllSelected}
-                indeterminate={isSomeSelected || undefined}
+                {...(isSomeSelected ? { indeterminate: true } : {})}
                 onCheckedChange={handleSelectAll}
                 aria-label="Select all entries"
               />

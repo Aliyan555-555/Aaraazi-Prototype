@@ -89,3 +89,61 @@ export interface LandParcel {
     createdAt: string;
     updatedAt: string;
 }
+
+// ============================================
+// AGENCY TRANSACTIONS
+// ============================================
+
+export type AgencyTransactionType =
+    // Acquisition
+    | 'purchase_price'
+    | 'registration_fee'
+    | 'stamp_duty'
+    | 'legal_fees'
+    | 'broker_commission'
+    | 'renovation'
+    | 'other_acquisition'
+    // Income
+    | 'rental_income'
+    | 'parking_fee'
+    | 'late_fee'
+    | 'other_income'
+    // Expenses
+    | 'property_tax'
+    | 'maintenance'
+    | 'repairs'
+    | 'utilities'
+    | 'insurance'
+    | 'management_fee'
+    | 'marketing'
+    | 'legal_expense'
+    | 'other_expense'
+    // Sale
+    | 'sale_price'
+    | 'sale_commission'
+    | 'closing_costs';
+
+export type AgencyTransactionCategory = 'acquisition' | 'income' | 'expense' | 'sale';
+
+export interface AgencyTransaction {
+    id: string;
+    propertyId: string;
+    propertyAddress: string;
+    category: AgencyTransactionCategory;
+    type: AgencyTransactionType;
+    amount: number;
+    date: string;
+    description: string;
+    notes?: string;
+    receiptNumber?: string;
+    receiptUrl?: string;
+    paymentMethod?: 'cash' | 'bank-transfer' | 'cheque' | 'online';
+    paymentReference?: string;
+    purchaseCycleId?: string;
+    sellCycleId?: string;
+    dealId?: string;
+    recordedBy: string;
+    recordedByName: string;
+    createdAt: string;
+    updatedAt: string;
+}

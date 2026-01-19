@@ -3,8 +3,8 @@
  * Header notification icon with badge and dropdown
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Check, Archive } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Bell, X, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { User } from '../types';
@@ -14,8 +14,6 @@ import {
   markAsRead,
   markAllAsRead,
   archiveNotification,
-  getRelativeTime,
-  getPriorityColor,
   autoCleanupOldNotifications
 } from '../lib/notifications';
 import { Notification } from '../types/notifications';

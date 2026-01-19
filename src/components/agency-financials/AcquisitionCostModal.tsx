@@ -5,8 +5,8 @@
  * PHASE 4: Auto-population from purchase cycle + Skip option
  */
 
-import React, { useState, useEffect } from 'react';
-import { X, DollarSign, FileText, AlertCircle, SkipForward } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { DollarSign, FileText, AlertCircle, SkipForward } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';

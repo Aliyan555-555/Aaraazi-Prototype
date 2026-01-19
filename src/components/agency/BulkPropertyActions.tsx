@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   CheckSquare, 
   Square, 
   Trash2, 
   Archive, 
   UserPlus, 
-  Tag, 
   TrendingUp, 
-  TrendingDown,
   Download,
   Share2,
   RefreshCw,
@@ -56,7 +54,6 @@ export function BulkPropertyActions({
   const [pendingAction, setPendingAction] = useState<{ action: string; label: string } | null>(null);
 
   const isAllSelected = selectedProperties.length === allProperties.length && allProperties.length > 0;
-  const selectedIds = selectedProperties.map(p => p.id);
 
   const handleSelectAll = () => {
     if (isAllSelected) {

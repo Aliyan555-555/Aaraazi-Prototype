@@ -244,7 +244,7 @@ export function SmartPropertySearch({
           {/* Search Results */}
           {value && searchResults.length > 0 ? (
             <div className="divide-y">
-              {searchResults.map(({ property, matchType, matchScore }) => (
+              {searchResults.map(({ property, matchType }) => (
                 <div
                   key={property.id}
                   className="p-3 hover:bg-gray-50 cursor-pointer transition-colors"

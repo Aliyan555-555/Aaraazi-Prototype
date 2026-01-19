@@ -1,25 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { User, Property } from '../types';
+import { User } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { formatCurrency, formatCurrencyShort } from '../lib/currency';
-import { getUsers } from '../lib/auth';
+import { formatCurrency } from '../lib/currency';
+import { getAllAgents } from '../lib/auth';
 
-// PHASE 5: Import foundation components ✅
-import { MetricCard } from './ui/metric-card';
-import { InfoPanel } from './ui/info-panel';
 
 import {
   BarChart,
   Bar,
   LineChart,
   Line,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -37,13 +30,12 @@ import {
   Home,
   Users,
   Clock,
-  Star,
   Activity,
   Calendar,
   CheckCircle,
-  AlertCircle,
   Minus
 } from 'lucide-react';
+import { AgentPerformance, AgentRanking, calculateAgentPerformance, compareToTeamAverage, getAgentActivityTimeline, getAgentPerformanceTrends, getAgentRankings, getTopPerformers } from '../lib/agentPerformance';
 
 interface AgentPerformanceDashboardProps {
   user: User;
@@ -55,8 +47,7 @@ export const AgentPerformanceDashboard: React.FC<AgentPerformanceDashboardProps>
 
   // Get all agents
   const allAgents = useMemo(() => {
-    const users: User[] = getUsers();
-    return users.filter((u: User) => u.role === 'agent');
+    return getAllAgents();
   }, []);
 
   // Calculate rankings

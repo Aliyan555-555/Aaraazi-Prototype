@@ -119,6 +119,16 @@ export function BuyerRequirementDetailsV4({
   const [selectedMatch, setSelectedMatch] = useState<InternalPropertyMatch | null>(null);
   const [selectedSharedMatch, setSelectedSharedMatch] = useState<PropertyMatch | null>(null);
 
+  // Helper function to normalize propertyType to always be an array
+  const getPropertyTypes = (): string[] => {
+    if (!requirement.propertyType) return [];
+    if (Array.isArray(requirement.propertyType)) return requirement.propertyType;
+    // If it's a string, convert to array
+    return [requirement.propertyType as string];
+  };
+
+  const propertyTypes = getPropertyTypes();
+
   // Navigation helper
   const handleNavigation = (page: string, id: string) => {
     if (page === 'sell-cycle' && onNavigateToSellCycle) {
@@ -393,7 +403,7 @@ export function BuyerRequirementDetailsV4({
           },
           {
             label: 'Property Types',
-            value: (requirement.propertyType || [])
+            value: propertyTypes
               .map((t: string) => t.charAt(0).toUpperCase() + t.slice(1))
               .join(', ') || 'Not specified',
             icon: <Home className="h-4 w-4" />,
@@ -471,7 +481,7 @@ export function BuyerRequirementDetailsV4({
         name={requirement.buyerName}
         role="buyer"
         phone={requirement.buyerContact}
-        notes={`Looking for ${(requirement.propertyType || []).join(', ')} in ${(requirement.preferredAreas || []).join(', ')}`}
+        notes={`Looking for ${propertyTypes.join(', ')} in ${(requirement.preferredAreas || []).join(', ')}`}
         tags={['Buyer', (requirement as any).urgency === 'high' ? 'Urgent' : (requirement as any).urgency].filter(Boolean)}
         onCall={() => window.open(`tel:${requirement.buyerContact}`)}
       />
@@ -539,8 +549,7 @@ export function BuyerRequirementDetailsV4({
           {
             icon: <Home className="h-4 w-4" />,
             label: 'Property Types',
-            value: `${(requirement.propertyType || []).length} type${(requirement.propertyType || []).length !== 1 ? 's' : ''
-              }`,
+            value: `${propertyTypes.length} type${propertyTypes.length !== 1 ? 's' : ''}`,
             color: 'blue',
           },
           {
@@ -574,7 +583,7 @@ export function BuyerRequirementDetailsV4({
           <div>
             <p className="text-sm text-gray-600 mb-2">Property Types</p>
             <div className="flex flex-wrap gap-2">
-              {(requirement.propertyType || []).map((type, idx) => (
+              {propertyTypes.map((type, idx) => (
                 <Badge key={idx} variant="secondary" className="capitalize">
                   {type}
                 </Badge>

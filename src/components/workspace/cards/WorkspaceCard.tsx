@@ -105,7 +105,7 @@ export const WorkspaceCard = React.memo<WorkspaceCardProps>(({
   return (
     <div
       className={cn(
-        'relative group bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200',
+        'relative group bg-white border border-gray-200 rounded-lg overflow-visible transition-all duration-200',
         'hover:shadow-lg hover:border-gray-300',
         onClick && !isDisabled && 'cursor-pointer',
         isSelected && 'ring-2 ring-blue-500 border-blue-500',
@@ -147,7 +147,7 @@ export const WorkspaceCard = React.memo<WorkspaceCardProps>(({
 
       {/* Image */}
       {(image || imageFallback) && (
-        <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
+        <div className="relative w-full h-48 bg-gray-100 overflow-hidden rounded-t-lg">
           {image ? (
             <img
               src={image}

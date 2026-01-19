@@ -1,50 +1,28 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 
-// PHASE 5: Import foundation components ✅
-import { MetricCard } from './ui/metric-card';
-import { InfoPanel } from './ui/info-panel';
+
 
 import {
   Building2,
-  TrendingUp,
   DollarSign,
   MapPin,
-  Search,
-  Filter,
   Download,
   Eye,
   Users,
-  FileText,
-  Calendar,
   Home,
   CheckCircle2,
-  XCircle,
   Clock,
   Tag,
-  BarChart3,
   Activity,
-  ArrowLeft,
   Plus,
   Edit,
-  Trash2,
-  MessageSquare,
   Phone,
   Mail,
-  ExternalLink,
   RefreshCw,
   Archive,
-  Share2,
-  TrendingDown,
-  AlertCircle,
-  Settings,
   MoreVertical,
-  ChevronDown,
-  ChevronUp,
   ChevronLeft,
   ChevronRight,
-  Zap,
-  Target as TargetIcon,
-  Star,
   UserPlus
 } from 'lucide-react';
 import { User, Property, Lead, Transaction } from '../types';
@@ -648,7 +626,7 @@ export function AgencyPropertiesDashboard({ user, onNavigate }: AgencyProperties
 
         const csv = [
           Object.keys(exportData[0]).join(','),
-          ...exportData.map(row => Object.values(row).join(','))
+          ...exportData.map((row:any) => Object.values(row).join(','))
         ].join('\n');
 
         const blob = new Blob([csv], { type: 'text/csv' });

@@ -3,12 +3,11 @@
  * Full-featured notification management interface
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { Notification, NotificationType, NotificationPriority } from '../types/notifications';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
@@ -20,7 +19,6 @@ import {
 } from './ui/select';
 import {
   Bell,
-  Filter,
   Search,
   Check,
   CheckCheck,
@@ -305,7 +303,7 @@ export function NotificationCenter({ user, onNavigate }: NotificationCenterProps
             </div>
 
             {/* Type Filter */}
-            <Select value={selectedType} onValueChange={(value) => setSelectedType(value as any)}>
+            <Select value={selectedType} onValueChange={(value:any) => setSelectedType(value as any)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
@@ -320,7 +318,7 @@ export function NotificationCenter({ user, onNavigate }: NotificationCenterProps
             </Select>
 
             {/* Priority Filter */}
-            <Select value={selectedPriority} onValueChange={(value) => setSelectedPriority(value as any)}>
+            <Select value={selectedPriority} onValueChange={(value:any) => setSelectedPriority(value as any)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Priorities" />
               </SelectTrigger>
@@ -334,7 +332,7 @@ export function NotificationCenter({ user, onNavigate }: NotificationCenterProps
             </Select>
 
             {/* Date Range */}
-            <Select value={dateRange} onValueChange={(value) => setDateRange(value as any)}>
+            <Select value={dateRange} onValueChange={(value:any) => setDateRange(value as any)}>
               <SelectTrigger>
                 <SelectValue placeholder="All Time" />
               </SelectTrigger>
@@ -369,7 +367,7 @@ export function NotificationCenter({ user, onNavigate }: NotificationCenterProps
       )}
 
       {/* Tabs */}
-      <Tabs value={selectedTab} onValueChange={(value) => setSelectedTab(value as any)}>
+      <Tabs value={selectedTab} onValueChange={(value:any) => setSelectedTab(value as any)}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="all">

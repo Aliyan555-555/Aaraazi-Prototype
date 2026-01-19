@@ -60,7 +60,7 @@ export function PropertyCard({
   const totalActiveCycles = sellCyclesCount + purchaseCyclesCount + rentCyclesCount;
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+    <Card className="overflow-visible hover:shadow-lg transition-shadow cursor-pointer group">
       {/* Image */}
       <button
         onClick={onClick}
@@ -104,7 +104,7 @@ export function PropertyCard({
         )}
 
         {/* Action Menu */}
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-50">
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button size="sm" variant="secondary" className="h-8 w-8 p-0">

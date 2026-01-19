@@ -84,85 +84,51 @@ export const DealsWorkspaceV4: React.FC<DealsWorkspaceV4Props> = ({
   }, [allDeals]);
 
   // Define Kanban columns
-  const kanbanColumns: KanbanColumn<Deal>[] = [
+  const kanbanColumns: KanbanColumn[] = [
     {
       id: 'offer-accepted',
-      title: 'Offer Accepted',
-      items: allDeals.filter(d => d.lifecycle.stage === 'offer-accepted'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Offer Accepted',
     },
     {
       id: 'agreement-signing',
-      title: 'Agreement Signing',
-      items: allDeals.filter(d => d.lifecycle.stage === 'agreement-signing'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Agreement Signing',
     },
     {
       id: 'documentation',
-      title: 'Documentation',
-      items: allDeals.filter(d => d.lifecycle.stage === 'documentation'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Documentation',
     },
     {
       id: 'payment-processing',
-      title: 'Payment Processing',
-      items: allDeals.filter(d => d.lifecycle.stage === 'payment-processing'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Payment Processing',
     },
     {
       id: 'handover-preparation',
-      title: 'Handover Prep',
-      items: allDeals.filter(d => d.lifecycle.stage === 'handover-preparation'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Handover Prep',
     },
     {
       id: 'transfer-registration',
-      title: 'Transfer Reg.',
-      items: allDeals.filter(d => d.lifecycle.stage === 'transfer-registration'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Transfer Reg.',
     },
     {
       id: 'final-handover',
-      title: 'Final Handover',
-      items: allDeals.filter(d => d.lifecycle.stage === 'final-handover'),
-      renderCard: (deal) => (
-        <DealKanbanCard
-          deal={deal}
-          onClick={() => onNavigate('deal-details', deal.id)}
-        />
-      ),
+      label: 'Final Handover',
     },
   ];
+
+  // Function to get kanban column for a deal
+  const getKanbanColumn = useCallback((deal: Deal) => {
+    return deal.lifecycle.stage;
+  }, []);
+
+  // Function to render kanban card
+  const renderKanbanCard = useCallback((deal: Deal) => {
+    return (
+      <DealKanbanCard
+        deal={deal}
+        onClick={() => onNavigate('deal-details', deal.id)}
+      />
+    );
+  }, [onNavigate]);
 
   // Define table columns
   const columns: Column<Deal>[] = [
@@ -456,6 +422,8 @@ export const DealsWorkspaceV4: React.FC<DealsWorkspaceV4Props> = ({
 
       // Kanban View
       kanbanColumns={kanbanColumns}
+      getKanbanColumn={getKanbanColumn}
+      renderKanbanCard={renderKanbanCard}
       
       // Table View
       columns={columns}
