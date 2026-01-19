@@ -9,7 +9,7 @@ import { Property } from '../types';
 import { getSellCycleById, getSellCycles } from './sellCycle';
 import { getPurchaseCycleById, getPurchaseCycles } from './purchaseCycle';
 import { getRentCycleById, getRentCycles } from './rentCycle';
-import { getPropertyById, updateProperty } from './data';
+import { getPropertyById, updateProperty, getProperties } from './data';
 import { triggerAutomation } from './tasks';
 
 /**
@@ -290,7 +290,6 @@ export function forcePropertyStatusSync(propertyId: string): void {
  * Batch sync all property statuses (useful for data migrations or fixes)
  */
 export function batchSyncAllPropertyStatuses(): void {
-  const { getProperties } = require('./data');
   const properties = getProperties();
   
   let syncedCount = 0;

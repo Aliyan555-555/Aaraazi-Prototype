@@ -1,5 +1,5 @@
 import { Property } from '../types';
-import { getPropertyById, updateProperty } from './data';
+import { getPropertyById, updateProperty, getProperties, addProperty } from './data';
 
 /**
  * Calculate days on market for a property
@@ -165,8 +165,7 @@ export function duplicateProperty(
     };
     
     // Save the duplicated property
-    const { saveProperty } = require('./data');
-    saveProperty(duplicatedProperty);
+    addProperty(duplicatedProperty);
     
     return duplicatedProperty;
   } catch (error) {
@@ -315,7 +314,6 @@ export function getPropertyEngagement(propertyId: string): {
  */
 export function getTopPerformingProperties(limit: number = 10): Property[] {
   try {
-    const { getProperties } = require('./data');
     const allProperties = getProperties();
     
     // Filter only active listings
@@ -346,7 +344,6 @@ export function getPropertiesNeedingAttention(): {
   expiringSoon: Property[];
 } {
   try {
-    const { getProperties } = require('./data');
     const allProperties = getProperties();
     
     const activeProperties = allProperties.filter(

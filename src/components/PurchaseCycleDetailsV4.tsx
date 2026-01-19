@@ -103,6 +103,7 @@ import {
 import { formatPKR } from '../lib/currency';
 import { formatPropertyAddress } from '../lib/utils';
 import { toast } from 'sonner';
+import { markPurchaseCycleOfferAccepted } from '../lib/purchaseCycle';
 
 // Payment Integration
 import { PaymentSummaryReadOnly } from './deals/PaymentSummaryReadOnly';
@@ -201,7 +202,6 @@ export function PurchaseCycleDetailsV4({
         return;
       }
 
-      const { markPurchaseCycleOfferAccepted } = require('../lib/purchaseCycle');
       markPurchaseCycleOfferAccepted(
         cycle.id,
         cycle.negotiatedPrice || cycle.offerAmount

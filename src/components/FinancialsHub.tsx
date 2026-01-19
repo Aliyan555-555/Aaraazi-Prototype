@@ -23,8 +23,12 @@ import {
   reverseJournalEntry,
   getAccountPayments,
   addAccountPayment,
-  getContacts
+  getContacts,
+  getCommissions
 } from '../lib/data';
+import { getDeals, getDealById } from '../lib/deals';
+import { getTransactions } from '../lib/transactions';
+import { getAllAgencyTransactions } from '../lib/agencyTransactions';
 import { formatCurrency, formatCurrencyShort } from '../lib/currency';
 import { formatPropertyAddressShort } from '../lib/utils';
 import { toast } from 'sonner';
@@ -822,137 +826,235 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
     }
   };
 
-  // Mock data - in real app this would come from API/database
-  const mockData = useMemo(() => {
-    const soldProperties = properties.filter(p => p.status === 'sold');
-    const totalCommission = soldProperties.reduce((sum, p) => sum + (p.commissionEarned || 0), 0);
-
+  // Real data calculations from actual sources
+  const deals = useMemo(() => getDeals(user.id, user.role), [user.id, user.role, refreshKey]);
+  const agencyTransactions = useMemo(() => getAllAgencyTransactions(), [refreshKey]);
+  const allTransactions = useMemo(() => getTransactions(), [refreshKey]);
+  
+  const financialData = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thisYear = now.getFullYear();
+    const thisMonth = now.getMonth();
+    
+    // Calculate Accounts Receivable (balance remaining on active deals)
+    const accountsReceivable = deals
+      .filter(d => d.lifecycle.status === 'active')
+      .reduce((sum, d) => sum + d.financial.balanceRemaining, 0);
+    
+    // Calculate Accounts Payable (pending expenses)
+    const accountsPayable = expenses
+      .filter(e => e.status === 'Pending')
+      .reduce((sum, e) => sum + e.amount, 0);
+    
+    // Calculate Cash Balance (from completed deals payments - expenses paid)
+    const completedDeals = deals.filter(d => d.lifecycle.status === 'completed');
+    const totalPaid = completedDeals.reduce((sum, d) => sum + d.financial.totalPaid, 0);
+    const paidExpenses = expenses
+      .filter(e => e.status === 'Paid')
+      .reduce((sum, e) => sum + e.amount, 0);
+    const cashBalance = totalPaid - paidExpenses;
+    
+    // Calculate Bank Balance (estimated from transactions)
+    const incomingTransactions = agencyTransactions
+      .filter(t => t.type === 'revenue' || t.type === 'sale')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const outgoingTransactions = agencyTransactions
+      .filter(t => t.type === 'expense' || t.type === 'purchase')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const bankBalance = incomingTransactions - outgoingTransactions;
+    
+    // Calculate Cash Flow Projected (next 30 days)
+    const next30Days = new Date(today);
+    next30Days.setDate(next30Days.getDate() + 30);
+    const projectedIncoming = deals
+      .filter(d => d.lifecycle.status === 'active' && d.financial.paymentPlan)
+      .flatMap(d => d.financial.paymentPlan!.installments)
+      .filter(inst => {
+        const dueDate = new Date(inst.dueDate);
+        return dueDate >= today && dueDate <= next30Days && inst.status === 'pending';
+      })
+      .reduce((sum, inst) => sum + inst.amount, 0);
+    const projectedOutgoing = expenses
+      .filter(e => {
+        const dueDate = new Date(e.date);
+        return dueDate >= today && dueDate <= next30Days && e.status === 'Pending';
+      })
+      .reduce((sum, e) => sum + e.amount, 0);
+    const cashFlowProjected = projectedIncoming - projectedOutgoing;
+    
+    // Calculate Commissions
+    const allCommissions = deals.flatMap(d => d.financial.commission.agents || []);
+    const pipelineCommissions = deals
+      .filter(d => d.lifecycle.status === 'active')
+      .reduce((sum, d) => {
+        const totalCommission = d.financial.commission.total || 0;
+        return sum + totalCommission;
+      }, 0);
+    
+    const paidYTD = allCommissions
+      .filter(c => c.status === 'paid')
+      .reduce((sum, c) => sum + c.amount, 0);
+    
+    const readyForPayout = allCommissions
+      .filter(c => c.status === 'approved')
+      .reduce((sum, c) => sum + c.amount, 0);
+    
+    const accruing = allCommissions
+      .filter(c => c.status === 'pending' || c.status === 'accruing')
+      .reduce((sum, c) => sum + c.amount, 0);
+    
+    // Calculate Payment Alerts (upcoming installments)
+    const paymentAlerts: Array<{
+      id: string;
+      description: string;
+      amount: number;
+      dueDate: string;
+      daysUntilDue: number;
+      type: 'incoming' | 'outgoing';
+      priority: 'high' | 'medium' | 'low';
+      projectName: string;
+    }> = [];
+    
+    deals.forEach(deal => {
+      if (deal.financial.paymentPlan && deal.lifecycle.status === 'active') {
+        const upcomingInstallments = deal.financial.paymentPlan.installments
+          .filter(inst => inst.status === 'pending')
+          .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+          .slice(0, 1); // Get next installment
+        
+        upcomingInstallments.forEach(inst => {
+          const dueDate = new Date(inst.dueDate);
+          const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysUntilDue <= 30) {
+            const property = properties.find(p => p.id === deal.propertyId);
+            paymentAlerts.push({
+              id: `${deal.id}_${inst.id}`,
+              description: `Payment due for ${property?.title || deal.propertyId}`,
+              amount: inst.amount - inst.paidAmount,
+              dueDate: inst.dueDate,
+              daysUntilDue: Math.max(0, daysUntilDue),
+              type: 'incoming',
+              priority: daysUntilDue <= 7 ? 'high' : daysUntilDue <= 14 ? 'medium' : 'low',
+              projectName: property?.title || 'Property Deal'
+            });
+          }
+        });
+      }
+    });
+    
+    // Add expense alerts
+    expenses
+      .filter(e => e.status === 'Pending')
+      .forEach(expense => {
+        const dueDate = new Date(expense.date);
+        const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntilDue <= 30) {
+          paymentAlerts.push({
+            id: `expense_${expense.id}`,
+            description: expense.description || expense.category,
+            amount: expense.amount,
+            dueDate: expense.date,
+            daysUntilDue: Math.max(0, daysUntilDue),
+            type: 'outgoing',
+            priority: daysUntilDue <= 7 ? 'high' : daysUntilDue <= 14 ? 'medium' : 'low',
+            projectName: expense.vendor || 'Vendor Payment'
+          });
+        }
+      });
+    
+    // Sort alerts by priority and due date
+    paymentAlerts.sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      return a.daysUntilDue - b.daysUntilDue;
+    });
+    
+    // Calculate Commission Ledger from deals
+    const commissionLedger = deals
+      .filter(d => d.financial.commission.agents && d.financial.commission.agents.length > 0)
+      .flatMap(deal => {
+        const property = properties.find(p => p.id === deal.propertyId);
+        return deal.financial.commission.agents!.map(agent => ({
+          id: `${deal.id}_${agent.agentId}`,
+          dealDate: deal.metadata.createdAt,
+          property: property?.title || property?.address || deal.propertyId,
+          agent: agent.agentName,
+          totalCommissionValue: agent.amount,
+          amountAccrued: agent.amount,
+          amountPaid: agent.status === 'paid' ? agent.amount : 0,
+          balanceDue: agent.status === 'paid' ? 0 : agent.amount,
+          status: agent.status === 'paid' ? 'Paid' : agent.status === 'approved' ? 'Ready for Payout' : 'Accruing'
+        }));
+      })
+      .sort((a, b) => new Date(b.dealDate).getTime() - new Date(a.dealDate).getTime());
+    
+    // Calculate Payment Plans from deals
+    const paymentPlans = deals
+      .filter(d => d.financial.paymentPlan && d.lifecycle.status === 'active')
+      .map(deal => {
+        const property = properties.find(p => p.id === deal.propertyId);
+        const buyer = contacts.find(c => c.id === deal.buyerId);
+        const plan = deal.financial.paymentPlan!;
+        const nextInstallment = plan.installments
+          .filter(inst => inst.status === 'pending')
+          .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
+        
+        const daysUntilDue = nextInstallment 
+          ? Math.ceil((new Date(nextInstallment.dueDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        
+        return {
+          id: deal.id,
+          property: property?.title || property?.address || deal.propertyId,
+          buyer: buyer?.name || 'Unknown Buyer',
+          totalValue: plan.totalAmount,
+          paidToDate: deal.financial.totalPaid,
+          nextInstallment: nextInstallment ? nextInstallment.amount - nextInstallment.paidAmount : 0,
+          nextDueDate: nextInstallment?.dueDate || '',
+          status: daysUntilDue <= 7 ? 'Due Soon' : daysUntilDue <= 30 ? 'On Track' : 'Scheduled'
+        };
+      });
+    
+    // Calculate Payables from expenses
+    const payables = expenses
+      .filter(e => e.status === 'Pending')
+      .map(expense => ({
+        id: expense.id,
+        vendor: expense.vendor || 'Unknown Vendor',
+        billNumber: expense.id,
+        amount: expense.amount,
+        dueDate: expense.date,
+        status: expense.status,
+        category: expense.category
+      }))
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    
     return {
       dashboard: {
-        cashBalance: 2850000,
-        bankBalance: 4560000,
-        accountsReceivable: 15675000,
-        accountsPayable: 4530000,
-        cashFlowProjected: 3330000
+        cashBalance: Math.max(0, cashBalance),
+        bankBalance: Math.max(0, bankBalance),
+        accountsReceivable,
+        accountsPayable,
+        cashFlowProjected
       },
       commissions: {
-        pipeline: 24500000,
-        paidYTD: 45300000,
-        readyForPayout: 5620000,
-        accruing: 8450000
+        pipeline: pipelineCommissions,
+        paidYTD,
+        readyForPayout,
+        accruing
       },
-      paymentAlerts: [
-        {
-          id: '1',
-          description: 'Final payment due from Metro Properties LLC - Tower A',
-          amount: 12500000,
-          dueDate: '2024-01-18',
-          daysUntilDue: 6,
-          type: 'incoming',
-          priority: 'high',
-          projectName: 'Downtown Towers Development'
-        },
-        {
-          id: '2',
-          description: 'Contractor payment - ABC Construction Phase 2',
-          amount: 8500000,
-          dueDate: '2024-01-15',
-          daysUntilDue: 3,
-          type: 'outgoing',
-          priority: 'high',
-          projectName: 'Downtown Renovation'
-        },
-        {
-          id: '3',
-          description: 'Client installment - Johnson Family Trust',
-          amount: 4500000,
-          dueDate: '2024-01-22',
-          daysUntilDue: 10,
-          type: 'incoming',
-          priority: 'medium',
-          projectName: 'Luxury Villa Project'
-        }
-      ],
-      commissionLedger: [
-        {
-          id: '1',
-          dealDate: '2024-01-15',
-          property: 'Downtown Towers, Apt 502',
-          agent: 'Sarah Johnson',
-          totalCommissionValue: 850000,
-          amountAccrued: 850000,
-          amountPaid: 850000,
-          balanceDue: 0,
-          status: 'Paid'
-        },
-        {
-          id: '2',
-          dealDate: '2024-01-12',
-          property: 'Riverside Villas, Unit 12A',
-          agent: 'Michael Chen',
-          totalCommissionValue: 620000,
-          amountAccrued: 620000,
-          amountPaid: 310000,
-          balanceDue: 310000,
-          status: 'Ready for Payout'
-        },
-        {
-          id: '3',
-          dealDate: '2024-01-10',
-          property: 'Metro Complex, Suite 208',
-          agent: 'Emily Rodriguez',
-          totalCommissionValue: 780000,
-          amountAccrued: 468000,
-          amountPaid: 0,
-          balanceDue: 468000,
-          status: 'Accruing'
-        }
-      ],
-      paymentPlans: [
-        {
-          id: '1',
-          property: 'Downtown Towers, Apt 502',
-          buyer: 'Johnson Family Trust',
-          totalValue: 28500000,
-          paidToDate: 19950000,
-          nextInstallment: 4275000,
-          nextDueDate: '2024-02-01',
-          status: 'On Track'
-        },
-        {
-          id: '2',
-          property: 'Riverside Villas, Unit 12A',
-          buyer: 'Metro Properties LLC',
-          totalValue: 22500000,
-          paidToDate: 11250000,
-          nextInstallment: 5625000,
-          nextDueDate: '2024-01-20',
-          status: 'Due Soon'
-        }
-      ],
+      paymentAlerts: paymentAlerts.slice(0, 10), // Limit to top 10
+      commissionLedger: commissionLedger.slice(0, 50), // Limit to 50 most recent
+      paymentPlans: paymentPlans.slice(0, 20), // Limit to 20 active plans
       expenses: expenses,
-      payables: [
-        {
-          id: '1',
-          vendor: 'ABC Construction',
-          billNumber: 'BILL-001',
-          amount: 1250000,
-          dueDate: '2024-01-20',
-          status: 'Pending',
-          category: 'Contractor Services'
-        },
-        {
-          id: '2',
-          vendor: 'Steel & Concrete Co',
-          billNumber: 'BILL-002',
-          amount: 8500000,
-          dueDate: '2024-01-15',
-          status: 'Approved',
-          category: 'Material Supply'
-        }
-      ]
+      payables: payables.slice(0, 20) // Limit to 20 pending payables
     };
-  }, [properties, leads, expenses]);
+  }, [deals, expenses, properties, contacts, agencyTransactions, refreshKey]);
 
   const renderDashboard = () => (
     <div className="space-y-6">
@@ -967,7 +1069,7 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Cash & Bank Position</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrencyShort(mockData.dashboard.cashBalance + mockData.dashboard.bankBalance)}
+                  {formatCurrencyShort(financialData.dashboard.cashBalance + financialData.dashboard.bankBalance)}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">Total liquid funds</p>
               </div>
@@ -985,12 +1087,12 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
                 <p className="text-sm font-medium text-gray-600">AR vs. AP</p>
                 <div className="flex items-center space-x-2">
                   <div className="text-green-600">
-                    <p className="text-lg font-bold">{formatCurrencyShort(mockData.dashboard.accountsReceivable)}</p>
+                    <p className="text-lg font-bold">{formatCurrencyShort(financialData.dashboard.accountsReceivable)}</p>
                     <p className="text-xs">Receivables</p>
                   </div>
                   <span className="text-gray-400">vs</span>
                   <div className="text-red-600">
-                    <p className="text-lg font-bold">{formatCurrencyShort(mockData.dashboard.accountsPayable)}</p>
+                    <p className="text-lg font-bold">{formatCurrencyShort(financialData.dashboard.accountsPayable)}</p>
                     <p className="text-xs">Payables</p>
                   </div>
                 </div>
@@ -1008,7 +1110,7 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">30-Day Cash Flow</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrencyShort(mockData.dashboard.cashFlowProjected)}
+                  {formatCurrencyShort(financialData.dashboard.cashFlowProjected)}
                 </p>
                 <p className="text-xs text-green-600 flex items-center mt-1">
                   <ArrowUpRight className="h-3 w-3 mr-1" />
@@ -1028,7 +1130,7 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Payment Alerts</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {mockData.paymentAlerts.length}
+                  {financialData.paymentAlerts.length}
                 </p>
                 <p className="text-xs text-orange-600 flex items-center mt-1">
                   <Clock className="h-3 w-3 mr-1" />
@@ -1051,13 +1153,13 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
               <CardTitle className="text-lg">Critical Payment Alerts</CardTitle>
             </div>
             <Badge className="bg-orange-100 text-orange-800">
-              {mockData.paymentAlerts.length} alerts
+              {financialData.paymentAlerts.length} alerts
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {mockData.paymentAlerts.map((alert) => (
+            {financialData.paymentAlerts.map((alert) => (
               <div key={alert.id} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
                 <div className="flex items-center space-x-3">
                   <div className={`w-3 h-3 rounded-full ${
@@ -1204,7 +1306,7 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
           <CardTitle>Company Expenses</CardTitle>
         </CardHeader>
         <CardContent>
-          {mockData.expenses.length === 0 ? (
+          {financialData.expenses.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Receipt className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p>No expenses recorded yet</p>
@@ -1299,7 +1401,7 @@ export const FinancialsHub: React.FC<FinancialsHubProps> = ({ user }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockData.payables.map((payable) => (
+              {financialData.payables.map((payable) => (
                 <TableRow key={payable.id}>
                   <TableCell className="font-medium">{payable.vendor}</TableCell>
                   <TableCell>{payable.billNumber}</TableCell>

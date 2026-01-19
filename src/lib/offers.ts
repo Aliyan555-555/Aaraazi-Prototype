@@ -1,4 +1,9 @@
 import { Offer, OfferStatusChange } from '../types';
+import { getProperties } from './data';
+import { getSellCyclesByProperty, createSellCycle, updateSellCycle } from './sellCycle';
+import { createDealFromOffer } from './deals';
+import { getUserById } from './auth';
+import { createNotification } from './notifications';
 
 const OFFERS_KEY = 'crm_offers';
 
@@ -114,12 +119,6 @@ export function updateOfferStatus(
     // CRITICAL FIX: When offer is accepted, create a deal
     if (newStatus === 'accepted' && offer.propertyId) {
       try {
-        const { getProperties } = require('./data');
-        const { getSellCyclesByProperty, createSellCycle } = require('./sellCycle');
-        const { createDealFromOffer } = require('./deals');
-        const { getUserById } = require('./auth');
-        const { createNotification } = require('./notifications');
-        
         const properties = getProperties();
         const property = properties.find((p: any) => p.id === offer.propertyId);
         
@@ -172,7 +171,6 @@ export function updateOfferStatus(
           }
           
           // Update sell cycle status
-          const { updateSellCycle } = require('./sellCycle');
           updateSellCycle(sellCycle.id, {
             offers: sellCycle.offers.map((o: any) => ({
               ...o,

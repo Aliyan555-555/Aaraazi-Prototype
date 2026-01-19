@@ -4,9 +4,11 @@
  */
 
 import { Property, SellCycle, PurchaseCycle, RentCycle } from '../types';
-import { getSellCycleById, getSellCyclesByProperty } from './sellCycle';
-import { getPurchaseCycleById, getPurchaseCyclesByProperty } from './purchaseCycle';
-import { getRentCycleById, getRentCyclesByProperty } from './rentCycle';
+import { getSellCycleById, getSellCyclesByProperty, getSellCycleStats } from './sellCycle';
+import { getPurchaseCycleById, getPurchaseCyclesByProperty, getPurchaseCycleStats } from './purchaseCycle';
+import { getRentCycleById, getRentCyclesByProperty, getRentCycleStats } from './rentCycle';
+import { getProperties } from './data';
+import { getTransactions } from './transactions';
 
 /**
  * Compute property status from all active cycles
@@ -116,7 +118,6 @@ export function detectInternalMatches(
   userId?: string,
   userRole?: string
 ): InternalMatch[] {
-  const { getProperties } = require('./data');
   const properties: Property[] = getProperties(userId, userRole);
   
   const matches: InternalMatch[] = [];
@@ -234,10 +235,6 @@ export function checkAgentDualRepresentation(
  * Get cycle statistics across all types
  */
 export function getAllCycleStats(userId?: string, userRole?: string) {
-  const { getSellCycleStats } = require('./sellCycle');
-  const { getPurchaseCycleStats } = require('./purchaseCycle');
-  const { getRentCycleStats } = require('./rentCycle');
-  
   return {
     sell: getSellCycleStats(userId, userRole),
     purchase: getPurchaseCycleStats(userId, userRole),
@@ -250,8 +247,6 @@ export function getAllCycleStats(userId?: string, userRole?: string) {
  * Get cycle activity timeline for a property
  */
 export function getPropertyCycleTimeline(propertyId: string) {
-  const { getTransactions } = require('./transactions');
-  
   const cycles = getPropertyCycles(propertyId);
   const transactions = getTransactions().filter((t: any) => t.propertyId === propertyId);
   

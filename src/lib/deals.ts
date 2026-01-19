@@ -2,6 +2,12 @@ import { Deal, Offer, SellCycle, PurchaseCycle, DealTask, DealPayment, DealStage
 import { createNotification } from './notifications';
 import { triggerAutomation } from './tasks';
 import { getPermissions } from './dealPermissions';
+import { linkAllContactsToDeal, linkDealToTransaction } from './dataFlowConnections';
+import { updatePurchaseCycle, getPurchaseCycleById, savePurchaseCycle } from './purchaseCycle';
+import { getSellCycleById, updateSellCycle, saveSellCycle } from './sellCycle';
+import { transferOwnership } from './ownership';
+import { getProperties, updateProperty } from './data';
+import { saveTransaction } from './transactions';
 
 const DEALS_KEY = 'aaraazi_deals_v4';
 
@@ -225,7 +231,6 @@ export const createDealFromOffer = (
   // DATA FLOW CONNECTION: Link contacts to deal (prevents data loss)
   // This ensures Contact -> Deal bidirectional linking is maintained
   try {
-    const { linkAllContactsToDeal } = require('./dataFlowConnections');
     linkAllContactsToDeal(deal);
   } catch (error) {
     console.error('Error linking contacts to deal:', error);
@@ -285,7 +290,6 @@ export const createDealFromCrossAgentOffer = (
   sellCycleId: string
 ): Deal => {
   // 1. Get the sell cycle
-  const { getSellCycleById } = require('./sellCycle');
   const sellCycle = getSellCycleById(sellCycleId);
 
   if (!sellCycle) {
@@ -534,8 +538,6 @@ export const createDealFromPurchaseCycle = (
 
   // Update bidirectional relationship: Deal → PurchaseCycle
   try {
-    const { updatePurchaseCycle } = require('./purchaseCycle');
-
     // Update purchase cycle with deal ID
     updatePurchaseCycle(purchaseCycle.id, {
       createdDealId: deal.id,
@@ -552,7 +554,6 @@ export const createDealFromPurchaseCycle = (
 
   // DATA FLOW CONNECTION: Link contacts to deal (prevents data loss)
   try {
-    const { linkAllContactsToDeal } = require('./dataFlowConnections');
     linkAllContactsToDeal(deal);
   } catch (error) {
     console.error('Error linking contacts to deal:', error);
@@ -1104,12 +1105,6 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
 
   // CRITICAL: Handle ownership transfer and cycle completion
   try {
-    const { transferOwnership } = require('./ownership');
-    const { updateSellCycle, getSellCycleById } = require('./sellCycle');
-    const { updatePurchaseCycle, getPurchaseCycleById } = require('./purchaseCycle');
-    const { getProperties, updateProperty } = require('./data');
-    const { saveTransaction } = require('./transactions');
-
     // Get the property
     const properties = getProperties();
 
@@ -1230,7 +1225,6 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
 
           // DATA FLOW CONNECTION: Link transaction to deal
           try {
-            const { linkDealToTransaction } = require('./dataFlowConnections');
             linkDealToTransaction(deal.id, transactionId);
           } catch (error) {
             console.error('Error linking transaction to deal:', error);
@@ -1410,7 +1404,6 @@ export const cancelDeal = (dealId: string, reason: string, agentId: string, agen
 const syncDealToAllCycles = (deal: Deal): void => {
   // Sync to Sell Cycle (if exists - may not exist for single-cycle purchase deals)
   if (deal.cycles.sellCycle) {
-    const { getSellCycleById, saveSellCycle } = require('./sellCycle');
     const sellCycle = getSellCycleById(deal.cycles.sellCycle.id);
 
     if (sellCycle) {
@@ -1423,7 +1416,6 @@ const syncDealToAllCycles = (deal: Deal): void => {
 
   // Sync to Purchase Cycle (if exists - may not exist for single-cycle sell deals)
   if (deal.cycles.purchaseCycle) {
-    const { getPurchaseCycleById, savePurchaseCycle } = require('./purchaseCycle');
     const purchaseCycle = getPurchaseCycleById(deal.cycles.purchaseCycle.id);
 
     if (purchaseCycle) {

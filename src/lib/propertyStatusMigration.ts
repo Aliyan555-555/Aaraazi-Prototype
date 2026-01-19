@@ -5,8 +5,8 @@
  * Run this after deploying the property status sync fix.
  */
 
-import { batchSyncAllPropertyStatuses, getPropertyStatusReason } from './propertyStatusSync';
-import { getProperties } from './data';
+import { batchSyncAllPropertyStatuses, getPropertyStatusReason, determinePropertyStatus } from './propertyStatusSync';
+import { getProperties, getPropertyById } from './data';
 
 /**
  * Run migration to fix all property statuses
@@ -106,8 +106,6 @@ export function previewPropertyStatusMigration(): {
   console.log('🔍 Previewing Property Status Migration...');
   console.log('='.repeat(60));
   
-  const { getPropertyById } = require('./data');
-  const { determinePropertyStatus, getPropertyStatusReason } = require('./propertyStatusSync');
   const properties = getProperties();
   
   const preview: Array<{

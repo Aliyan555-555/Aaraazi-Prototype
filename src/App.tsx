@@ -41,6 +41,7 @@ import { initializeData } from './lib/data';
 import { initializeInvestorData } from './lib/investors'; // For purchase cycle investor syndication
 import { saveSystemTemplates } from './lib/reportTemplates'; // For report templates initialization
 import { runMatchingForAllSharedCycles } from './lib/smartMatching'; // Smart matching system
+import { parseRoute } from './lib/routes';
 import { SaaSUser, User, Property, Project, LandParcel, Contact } from './types';
 import { BuyerRequirement, RentRequirement, SellCycle, PurchaseCycle, RentCycle } from './types';
 import { Users } from 'lucide-react';
@@ -440,8 +441,7 @@ function App() {
     let queryParams: Record<string, string> = {};
 
     try {
-      const routesModule = require('./lib/routes');
-      const parsed = routesModule.parseRoute(page);
+      const parsed = parseRoute(page);
       pageName = parsed.path;
       queryParams = parsed.queryParams;
 

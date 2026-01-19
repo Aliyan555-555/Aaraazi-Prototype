@@ -27,6 +27,7 @@ import {
   getTopPerformingProperties,
   getPropertiesNeedingAttention
 } from '../lib/propertyAnalytics';
+import { getProperties } from '../lib/data';
 import { MarketTrendsChart } from './MarketTrendsChart';
 import { AgentPerformanceDashboard } from './AgentPerformanceDashboard';
 import {
@@ -70,7 +71,6 @@ export const AgencyAnalyticsDashboard: React.FC<AgencyAnalyticsDashboardProps> =
 
   // Get all properties
   const allProperties = useMemo(() => {
-    const { getProperties } = require('../lib/data');
     return getProperties(user.role === 'admin' ? undefined : user.id, user.role);
   }, [user.id, user.role]);
 

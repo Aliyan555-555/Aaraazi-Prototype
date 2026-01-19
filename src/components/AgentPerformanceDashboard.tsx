@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { formatCurrency, formatCurrencyShort } from '../lib/currency';
+import { getUsers } from '../lib/auth';
 
 // PHASE 5: Import foundation components ✅
 import { MetricCard } from './ui/metric-card';
@@ -54,7 +55,6 @@ export const AgentPerformanceDashboard: React.FC<AgentPerformanceDashboardProps>
 
   // Get all agents
   const allAgents = useMemo(() => {
-    const { getUsers } = require('../lib/auth');
     const users: User[] = getUsers();
     return users.filter((u: User) => u.role === 'agent');
   }, []);

@@ -22,6 +22,7 @@ import { addContact, getContacts } from './data';
 import { createBuyerRequirement } from './buyerRequirements';
 import { createRentRequirement } from './rentRequirements';
 import { createInvestor } from './investors';
+import { ensureLeadContactLink } from './dataFlowConnections';
 import { 
   extractContactLeadTracking, 
   extractRequirementLeadTracking, 
@@ -100,7 +101,6 @@ export async function convertLead(
       
       // DATA FLOW CONNECTION: Ensure lead-contact link is properly established
       try {
-        const { ensureLeadContactLink } = require('./dataFlowConnections');
         ensureLeadContactLink(contactId, leadId);
       } catch (error) {
         logger.warn('Error ensuring lead-contact link', error);

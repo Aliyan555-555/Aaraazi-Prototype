@@ -13,6 +13,7 @@
 import { Deal } from '../types/deals';
 import { Contact } from '../types';
 import { getContactById, updateContact } from './data';
+import { getDealById, updateDeal } from './deals';
 import { logger } from './logger';
 
 /**
@@ -132,7 +133,6 @@ export function ensureLeadContactLink(contactId: string, leadId: string): void {
  */
 export function linkDealToTransaction(dealId: string, transactionId: string): void {
   try {
-    const { getDealById, updateDeal } = require('./deals');
     const deal = getDealById(dealId);
     
     if (!deal) {

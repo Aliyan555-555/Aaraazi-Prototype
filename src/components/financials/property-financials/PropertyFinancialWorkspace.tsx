@@ -8,7 +8,9 @@ import { PropertyFinancialList, PropertyFinancialSummary } from './PropertyFinan
 import { PropertyProfitLossModal } from './PropertyProfitLossModal';
 import { Button } from '../../ui/button';
 import { getProperties } from '../../../lib/data';
+import { getAllAgencyTransactions } from '../../../lib/agencyTransactions';
 import { formatPKR } from '../../../lib/currency';
+import { formatPropertyAddressShort } from '../../../lib/utils';
 import { toast } from 'sonner';
 import { Download, FileText } from 'lucide-react';
 
@@ -68,32 +70,45 @@ export const PropertyFinancialWorkspace: React.FC<PropertyFinancialWorkspaceProp
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
   const [selectedPropertyForPL, setSelectedPropertyForPL] = useState<PropertyFinancialSummary | null>(null);
 
-  // Get all properties and calculate financials
+  // Get all properties and calculate financials from real agency transactions
   const propertyFinancials = useMemo(() => {
     const properties = getProperties(user.id, user.role);
+    const agencyTransactions = getAllAgencyTransactions();
     
-    // For now, we'll create mock financial summaries
-    // In production, this would aggregate AgencyTransaction data from localStorage
+    // Calculate real financial summaries from agency transactions
     const financials: PropertyFinancialSummary[] = properties.map(property => {
-      // Mock financial data - in production, aggregate from AgencyTransaction[]
-      const totalInvestment = Math.floor(Math.random() * 10000000) + 5000000;
-      const totalRevenue = Math.floor(Math.random() * 12000000) + 5000000;
-      const totalExpenses = Math.floor(Math.random() * 2000000) + 500000;
+      const propertyTransactions = agencyTransactions.filter(t => t.propertyId === property.id);
+      
+      // Calculate total investment (purchases + expenses)
+      const totalInvestment = propertyTransactions
+        .filter(t => t.type === 'purchase' || t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      // Calculate total revenue (sales + rental income)
+      const totalRevenue = propertyTransactions
+        .filter(t => t.type === 'sale' || t.type === 'revenue' || t.type === 'rental-income')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      // Calculate total expenses (operating expenses)
+      const totalExpenses = propertyTransactions
+        .filter(t => t.type === 'expense' || t.category === 'operating-expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
       const netProfit = totalRevenue - totalInvestment - totalExpenses;
       const roi = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
       
       return {
         propertyId: property.id,
         propertyTitle: property.title || 'Untitled Property',
-        propertyAddress: property.address,
+        propertyAddress: formatPropertyAddressShort(property.address),
         status: property.status as 'active' | 'sold' | 'rented',
         totalInvestment,
         totalRevenue,
         totalExpenses,
         netProfit,
         roi,
-        acquisitionDate: property.metadata?.createdAt,
-        transactionCount: Math.floor(Math.random() * 20) + 5,
+        acquisitionDate: property.metadata?.createdAt || property.createdAt,
+        transactionCount: propertyTransactions.length,
       };
     });
 

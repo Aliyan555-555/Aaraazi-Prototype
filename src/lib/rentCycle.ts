@@ -6,6 +6,9 @@
 import { RentCycle, Property, SharingSettings, PrivacySettings, CollaborationData } from '../types';
 import { getProperties, updateProperty } from './data';
 import { syncPropertyStatusFromRentCycle } from './propertyStatusSync';
+import { formatPKR } from './currency';
+import { updateMatch } from './smartMatching';
+import { createNotification } from './notifications';
 
 const RENT_CYCLES_KEY = 'rent_cycles_v3';
 
@@ -577,7 +580,6 @@ export function submitCrossAgentRentOffer(
     throw new Error('Cannot submit application - cycle is not shared');
   }
 
-  const { formatPKR } = require('./currency');
   const applicationId = `app_${Date.now()}`;
   const now = new Date().toISOString();
 
@@ -614,7 +616,6 @@ export function submitCrossAgentRentOffer(
   // Update match status if this was from a match
   if (applicationData.matchId) {
     try {
-      const { updateMatch } = require('./smartMatching');
       updateMatch(applicationData.matchId, {
         status: 'offer-submitted',
         offerId: applicationId,
@@ -628,7 +629,6 @@ export function submitCrossAgentRentOffer(
   // Send notification to listing agent
   if (typeof window !== 'undefined') {
     try {
-      const { createNotification } = require('./notifications');
       createNotification({
         userId: cycle.agentId,
         type: 'application-received',
@@ -705,8 +705,6 @@ export function acceptCrossAgentOffer(
     throw new Error('Application not found');
   }
 
-  const { formatPKR } = require('./currency');
-
   // Update application status
   updateRentalApplication(rentCycleId, applicationId, {
     status: 'accepted',
@@ -716,7 +714,6 @@ export function acceptCrossAgentOffer(
   // Update match if this was from a match
   if (application.matchId) {
     try {
-      const { updateMatch } = require('./smartMatching');
       updateMatch(application.matchId, {
         status: 'accepted',
       });
@@ -728,7 +725,6 @@ export function acceptCrossAgentOffer(
   // Send notification to submitting agent
   if (application.submittedByAgentId && typeof window !== 'undefined') {
     try {
-      const { createNotification } = require('./notifications');
       createNotification({
         userId: application.submittedByAgentId,
         type: 'application-accepted',
@@ -768,8 +764,6 @@ export function rejectCrossAgentOffer(
     throw new Error('Application not found');
   }
 
-  const { formatPKR } = require('./currency');
-
   // Update application status
   updateRentalApplication(rentCycleId, applicationId, {
     status: 'rejected',
@@ -780,7 +774,6 @@ export function rejectCrossAgentOffer(
   // Send notification to submitting agent
   if (application.submittedByAgentId && typeof window !== 'undefined') {
     try {
-      const { createNotification } = require('./notifications');
       createNotification({
         userId: application.submittedByAgentId,
         type: 'application-rejected',

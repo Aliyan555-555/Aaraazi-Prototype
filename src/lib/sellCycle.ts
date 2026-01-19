@@ -10,6 +10,17 @@ import { saveTransaction } from './transactions';
 import { syncPropertyStatusFromSellCycle } from './propertyStatusSync';
 import { formatPropertyAddress } from './utils';
 import { formatPKR } from './currency';
+import { createDealFromOffer, getDealById } from './deals';
+import { createNotification } from './notifications';
+import { getBuyerRequirementById } from './buyerRequirements';
+import { 
+  updatePurchaseCycle,
+  createPurchaseCycleFromBuyerRequirement,
+  markPurchaseCycleOfferAccepted,
+  getPurchaseCycleByBuyerRequirement,
+  getPurchaseCycleById
+} from './purchaseCycle';
+import { updateMatch } from './smartMatching';
 
 const SELL_CYCLES_KEY = 'sell_cycles_v3';
 
@@ -253,8 +264,6 @@ export function updateOffer(
       const acceptedOffer = updatedOffers.find(o => o.id === offerId);
 
       if (acceptedOffer?.linkedPurchaseCycleId) {
-        const { updatePurchaseCycle } = require('./purchaseCycle');
-
         console.log('🔗 Syncing offer acceptance to purchase cycle');
         console.log(`   - Offer ID: ${offerId}`);
         console.log(`   - Purchase Cycle: ${acceptedOffer.linkedPurchaseCycleId}`);
@@ -308,18 +317,6 @@ export function acceptOffer(sellCycleId: string, offerId: string): void {
     console.log('🚀 Starting deal creation process...');
     console.log(`   - Sell Cycle ID: ${sellCycleId}`);
     console.log(`   - Offer ID: ${offerId}`);
-
-    // Import required functions
-    const { createDealFromOffer } = require('./deals');
-    const { createNotification } = require('./notifications');
-    const { getBuyerRequirementById } = require('./buyerRequirements');
-    const {
-      createPurchaseCycleFromBuyerRequirement,
-      markPurchaseCycleOfferAccepted,
-      getPurchaseCycleByBuyerRequirement,
-      getPurchaseCycleById // CRITICAL FIX: Import this
-    } = require('./purchaseCycle');
-    const { getProperties } = require('./data');
 
     // Get updated cycle
     const updatedCycle = getSellCycleById(sellCycleId);
@@ -427,7 +424,6 @@ export function acceptOffer(sellCycleId: string, offerId: string): void {
 
     // Update Purchase Cycle with deal link if it exists
     if (purchaseCycle) {
-      const { updatePurchaseCycle } = require('./purchaseCycle');
       updatePurchaseCycle(purchaseCycle.id, {
         linkedDealId: deal.id,
         createdDealId: deal.id,
@@ -449,7 +445,6 @@ export function acceptOffer(sellCycleId: string, offerId: string): void {
     }
 
     // Verify the deal was saved
-    const { getDealById } = require('./deals');
     const savedDeal = getDealById(deal.id);
     if (!savedDeal) {
       throw new Error('Deal was created but not found in storage after save');
@@ -928,7 +923,6 @@ export function submitCrossAgentOffer(
   // Update match status if this was from a match
   if (offerData.matchId) {
     try {
-      const { updateMatch } = require('./smartMatching');
       updateMatch(offerData.matchId, {
         status: 'offer-submitted',
         offerId: offerId,
@@ -942,7 +936,6 @@ export function submitCrossAgentOffer(
   // Send notification to listing agent
   if (typeof window !== 'undefined') {
     try {
-      const { createNotification } = require('./notifications');
       createNotification({
         userId: cycle.agentId,
         type: 'offer-received',
@@ -995,7 +988,6 @@ export function acceptCrossAgentOffer(
   // Update match if this was from a match
   if (offer.matchId) {
     try {
-      const { updateMatch } = require('./smartMatching');
       updateMatch(offer.matchId, {
         status: 'accepted',
       });
@@ -1007,7 +999,6 @@ export function acceptCrossAgentOffer(
   // Send notification to submitting agent
   if (offer.submittedByAgentId && typeof window !== 'undefined') {
     try {
-      const { createNotification } = require('./notifications');
       createNotification({
         userId: offer.submittedByAgentId,
         type: 'offer-accepted',
@@ -1057,7 +1048,6 @@ export function rejectCrossAgentOffer(
   // Send notification to submitting agent
   if (offer.submittedByAgentId && typeof window !== 'undefined') {
     try {
-      const { createNotification } = require('./notifications');
       createNotification({
         userId: offer.submittedByAgentId,
         type: 'offer-rejected',

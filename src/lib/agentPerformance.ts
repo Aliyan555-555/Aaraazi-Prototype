@@ -3,6 +3,7 @@ import { getProperties } from './data';
 import { getLeads } from './data';
 import { getContacts } from './data';
 import { calculateDaysOnMarket } from './propertyAnalytics';
+import { getUsers } from './auth';
 
 /**
  * Agent Performance Analytics Library
@@ -336,7 +337,6 @@ function calculateOverallScore(metrics: {
 export function getAgentRankings(
   timeRange: 'all' | '30days' | '90days' | 'ytd' = 'all'
 ): AgentRanking[] {
-  const { getUsers } = require('./auth');
   const users: User[] = getUsers();
   
   // Filter to only agents
@@ -382,7 +382,6 @@ export function getAgentRankings(
  * Get top performing agents
  */
 export function getTopPerformers(limit: number = 5, timeRange: 'all' | '30days' | '90days' | 'ytd' = 'all'): AgentPerformance[] {
-  const { getUsers } = require('./auth');
   const users: User[] = getUsers();
   
   const agents = users.filter((u: User) => u.role === 'agent');
@@ -421,7 +420,6 @@ export function compareToTeamAverage(agentId: string): {
     status: 'above' | 'at' | 'below';
   }[];
 } {
-  const { getUsers } = require('./auth');
   const users: User[] = getUsers();
   const agents = users.filter((u: User) => u.role === 'agent');
   

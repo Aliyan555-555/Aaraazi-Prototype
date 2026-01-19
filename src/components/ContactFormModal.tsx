@@ -23,6 +23,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
+import { updateContact } from '../lib/data';
 import {
   required,
   email,
@@ -151,7 +152,6 @@ export function ContactFormModal({
     try {
       if (editingContact) {
         // Update existing contact
-        const { updateContact } = require('../lib/data');
         const updatedContact = updateContact(editingContact.id, {
           ...formData,
           updatedAt: new Date().toISOString(),

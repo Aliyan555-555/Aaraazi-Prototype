@@ -9,6 +9,8 @@ import { transferOwnership } from './ownership';
 import { saveTransaction } from './transactions';
 import { getSellCycleById, getSellCyclesByProperty, addOffer } from './sellCycle';
 import { syncPropertyStatusFromPurchaseCycle } from './propertyStatusSync';
+import { createDealFromPurchaseCycle } from './deals';
+import { createNotification } from './notifications';
 
 const PURCHASE_CYCLES_KEY = 'purchase_cycles_v3';
 
@@ -596,10 +598,6 @@ export function markPurchaseCycleOfferAccepted(
   // CRITICAL: If this purchase cycle is linked to a sell cycle (intra-agency),
   // the sell cycle will create the deal. Don't create duplicate deals!
   try {
-    const { createDealFromPurchaseCycle } = require('./deals');
-    const { createNotification } = require('./notifications');
-    const { getProperties } = require('./data');
-    
     const cycle = getPurchaseCycleById(purchaseCycleId);
     if (!cycle) return;
     

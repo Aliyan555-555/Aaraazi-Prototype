@@ -3,6 +3,9 @@
  * Handles password changes, security logs, and authentication security
  */
 
+import { getUserSettings } from './userSettings';
+import { getUserProfile } from './userProfile';
+
 const SECURITY_LOGS_KEY = 'estatemanager_security_logs';
 const PASSWORD_HISTORY_KEY = 'estatemanager_password_history';
 
@@ -265,8 +268,8 @@ export const calculateSecurityScore = (userId: string): {
   score: number;
   recommendations: string[];
 } => {
-  const settings = require('./userSettings').getUserSettings(userId);
-  const profile = require('./userProfile').getUserProfile(userId);
+  const settings = getUserSettings(userId);
+  const profile = getUserProfile(userId);
   const logs = getSecurityLogs(userId);
   
   let score = 0;

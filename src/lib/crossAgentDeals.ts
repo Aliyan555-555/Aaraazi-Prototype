@@ -13,9 +13,9 @@ import {
   LinkCyclesToDealParams,
   LinkCyclesResult 
 } from '../types/deals';
-import { getDeals as getDealsFromStorage, saveDealToStorage, updateDealInStorage } from './deals';
+import { getDeals as getDealsFromStorage, saveDealToStorage, updateDealInStorage, createDealFromOffer } from './deals';
 import { getSellCycleById, updateSellCycle, createSellCycle } from './sellCycle';
-import { getPurchaseCycleById, updatePurchaseCycle, createPurchaseCycle } from './purchaseCycle';
+import { getPurchaseCycleById, updatePurchaseCycle, createPurchaseCycle, getPurchaseCycles } from './purchaseCycle';
 import { getRentCycleById, updateRentCycle } from './rentCycle';
 import { getPropertyById } from './data';
 import { createNotification } from './notifications';
@@ -284,9 +284,6 @@ export function createDealFromCrossAgentOffer(
     const purchaseCycle = getPurchaseCycleById(purchaseCycleId);
 
     // Step 2: Create the deal using standard deal creation
-    // Import the function dynamically to avoid circular dependencies
-    const { createDealFromOffer } = require('./deals');
-    
     // Convert CrossAgentOffer to standard Offer format
     const standardOffer = {
       id: offer.id,
@@ -398,7 +395,6 @@ function getDealById(dealId: string): Deal | null {
  */
 function getPurchaseCycleByPropertyAndAgent(propertyId: string, agentId: string): any | null {
   try {
-    const { getPurchaseCycles } = require('./purchaseCycle');
     const cycles = getPurchaseCycles();
     return cycles.find((c: any) => c.propertyId === propertyId && c.agentId === agentId) || null;
   } catch (error) {

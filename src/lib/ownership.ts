@@ -1,5 +1,5 @@
 import { Property, OwnershipRecord, Transaction, Contact, InvestorShare } from '../types';
-import { getPropertyById, updateProperty, getContacts } from './data';
+import { getPropertyById, updateProperty, getContacts, getProperties } from './data';
 import { saveTransaction } from './transactions';
 import { addInvestorInvestment } from './investors';
 
@@ -378,7 +378,6 @@ export function finalizeSale(
  */
 export function getRelistableProperties(agentId?: string, userRole?: string): Property[] {
   try {
-    const { getProperties } = require('./data');
     const allProperties = getProperties(agentId, userRole);
     
     return allProperties.filter(property => {

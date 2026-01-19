@@ -12,7 +12,9 @@ import { FinancialReportsWorkspace } from './reports/FinancialReportsWorkspace';
 import { BudgetingWorkspace } from './budgeting/BudgetingWorkspace';
 import { formatPKR, formatCurrencyShort } from '../../lib/currency';
 import { getDeals } from '../../lib/deals';
-import { getExpenses, getProperties } from '../../lib/data';
+import { getExpenses, getProperties, getJournalEntries } from '../../lib/data';
+import { getAllAgencyTransactions } from '../../lib/agencyTransactions';
+import { getPropertyInvestments } from '../../lib/investors';
 import {
   DollarSign,
   Receipt,
@@ -203,31 +205,61 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
 
     const pendingExpenses = expenses.filter(e => e.status === 'Pending').length;
 
-    // Property financials stats
+    // Property financials stats - calculate from agency transactions
+    const agencyTransactions = getAllAgencyTransactions();
     const propertiesWithFinancials = properties.length;
-    const avgROI = 15.5; // Placeholder - will be calculated from actual property P&L
+    
+    // Calculate average ROI from property transactions
+    const propertyROIs = properties.map(property => {
+      const propertyTransactions = agencyTransactions.filter(t => t.propertyId === property.id);
+      const investments = propertyTransactions
+        .filter(t => t.type === 'purchase' || t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+      const revenues = propertyTransactions
+        .filter(t => t.type === 'sale' || t.type === 'revenue')
+        .reduce((sum, t) => sum + t.amount, 0);
+      const profit = revenues - investments;
+      return investments > 0 ? (profit / investments) * 100 : 0;
+    }).filter(roi => !isNaN(roi) && isFinite(roi));
+    
+    const avgROI = propertyROIs.length > 0 
+      ? propertyROIs.reduce((sum, roi) => sum + roi, 0) / propertyROIs.length 
+      : 0;
 
-    // Investor stats
-    const totalInvestors = properties.reduce((sum, p: any) => {
-      return sum + (p.investors?.length || 0);
-    }, 0);
-    const pendingDistributions = 250000; // Placeholder - will be calculated
+    // Investor stats - calculate from property investments
+    const allInvestments = getPropertyInvestments();
+    const uniqueInvestors = new Set(allInvestments.map(inv => inv.investorId));
+    const totalInvestors = uniqueInvestors.size;
+    
+    // Calculate pending distributions (unpaid profit distributions)
+    const pendingDistributions = allInvestments
+      .filter(inv => inv.status === 'active' && inv.pendingDistribution && inv.pendingDistribution > 0)
+      .reduce((sum, inv) => sum + (inv.pendingDistribution || 0), 0);
 
-    // General Ledger stats
-    const totalAccounts = 45; // Placeholder
-    const totalEntries = 128; // Placeholder
+    // General Ledger stats - calculate from journal entries
+    const journalEntries = getJournalEntries(user.id, user.role);
+    const uniqueAccounts = new Set(journalEntries.map(entry => entry.account));
+    const totalAccounts = uniqueAccounts.size;
+    const totalEntries = journalEntries.length;
 
-    // Bank & Treasury stats
-    const cashPosition = 1250000; // Placeholder
-    const bankAccounts = 3; // Placeholder
+    // Bank & Treasury stats - calculate from transactions and deals
+    const completedDeals = deals.filter(d => d.lifecycle.status === 'completed');
+    const totalPaid = completedDeals.reduce((sum, d) => sum + d.financial.totalPaid, 0);
+    const paidExpenses = expenses
+      .filter(e => e.status === 'Paid')
+      .reduce((sum, e) => sum + e.amount, 0);
+    const cashPosition = Math.max(0, totalPaid - paidExpenses);
+    
+    // Count unique bank accounts (from transactions or deals)
+    const bankAccounts = 1; // Default to 1, can be enhanced with bank account tracking
 
-    // Reports stats
-    const generatedReports = 12; // Placeholder
-    const thisMonthReports = 3; // Placeholder
+    // Reports stats - placeholder (would need report storage)
+    const generatedReports = 0; // Would need to track generated reports
+    const thisMonthReports = 0;
 
-    // Budgeting stats
-    const totalBudget = 5000000; // Placeholder
-    const budgetVariance = -5; // Placeholder (negative is good)
+    // Budgeting stats - placeholder (would need budget tracking)
+    const totalBudget = 0; // Would need budget system
+    const budgetVariance = 0;
 
     return {
       commissions: [

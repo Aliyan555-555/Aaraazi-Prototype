@@ -6,7 +6,8 @@ import {
   updateInvestorStats,
   saveProfitDistribution,
   getProfitDistributionByProperty,
-  getInvestorById
+  getInvestorById,
+  getPropertyInvestments
 } from './investors';
 
 /**
@@ -203,7 +204,6 @@ export function recalculateAllInvestorStats(investorIds?: string[]): void {
   
   if (idsToUpdate.length === 0) {
     // Get all unique investor IDs from investments
-    const { getPropertyInvestments } = require('./investors');
     const allInvestments = getPropertyInvestments();
     const uniqueIds = Array.from(new Set(allInvestments.map((inv: PropertyInvestment) => inv.investorId)));
     idsToUpdate.push(...uniqueIds);
