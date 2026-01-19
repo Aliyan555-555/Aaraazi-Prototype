@@ -3,7 +3,7 @@ import { getProperties } from './data';
 import { getLeads } from './data';
 import { getContacts } from './data';
 import { calculateDaysOnMarket } from './propertyAnalytics';
-import { getUsers } from './auth';
+import { getAllAgents } from './auth';
 
 /**
  * Agent Performance Analytics Library
@@ -337,10 +337,7 @@ function calculateOverallScore(metrics: {
 export function getAgentRankings(
   timeRange: 'all' | '30days' | '90days' | 'ytd' = 'all'
 ): AgentRanking[] {
-  const users: User[] = getUsers();
-  
-  // Filter to only agents
-  const agents = users.filter((u: User) => u.role === 'agent');
+  const agents = getAllAgents();
   
   // Calculate performance for each agent
   const performances = agents.map((agent: User) => 
@@ -382,9 +379,7 @@ export function getAgentRankings(
  * Get top performing agents
  */
 export function getTopPerformers(limit: number = 5, timeRange: 'all' | '30days' | '90days' | 'ytd' = 'all'): AgentPerformance[] {
-  const users: User[] = getUsers();
-  
-  const agents = users.filter((u: User) => u.role === 'agent');
+  const agents = getAllAgents();
   
   const performances = agents.map((agent: User) => 
     calculateAgentPerformance(agent.id, agent.name, timeRange)
@@ -420,8 +415,7 @@ export function compareToTeamAverage(agentId: string): {
     status: 'above' | 'at' | 'below';
   }[];
 } {
-  const users: User[] = getUsers();
-  const agents = users.filter((u: User) => u.role === 'agent');
+  const agents = getAllAgents();
   
   const agentPerformance = calculateAgentPerformance(
     agentId,
