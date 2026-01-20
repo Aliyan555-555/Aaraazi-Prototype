@@ -2,7 +2,6 @@ import { Property, Lead, Contact, User } from '../types';
 import { getProperties } from './data';
 import { getLeads } from './data';
 import { getContacts } from './data';
-import { calculateDaysOnMarket } from './propertyAnalytics';
 import { getAllAgents } from './auth';
 
 /**

@@ -41,7 +41,7 @@ import { initializeData } from './lib/data';
 import { initializeInvestorData } from './lib/investors'; // For purchase cycle investor syndication
 import { saveSystemTemplates } from './lib/reportTemplates'; // For report templates initialization
 import { runMatchingForAllSharedCycles } from './lib/smartMatching'; // Smart matching system
-import { parseRoute } from './lib/routes';
+import { parseRoute, isValidRoute } from './lib/routes';
 import { SaaSUser, User, Property, Project, LandParcel, Contact } from './types';
 import { BuyerRequirement, RentRequirement, SellCycle, PurchaseCycle, RentCycle } from './types';
 import { Users } from 'lucide-react';
@@ -49,7 +49,6 @@ import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { Button } from './components/ui/button';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { LoadingFallback } from './components/LoadingFallback';
 import { getUnreadCount } from './lib/notifications';
 import { getPropertyById, getContacts, getProperties } from './lib/data';
 import { getSellCycleById, getSellCycles } from './lib/sellCycle';
@@ -81,7 +80,6 @@ const LeadDetailsV4 = lazy(() => import('./components/leads/LeadDetailsV4').then
 
 const FollowUpTasks = lazy(() => import('./components/FollowUpTasks').then(m => ({ default: m.FollowUpTasks })));
 const CommissionReports = lazy(() => import('./components/CommissionReports').then(m => ({ default: m.CommissionReports })));
-const FinancialsHub = lazy(() => import('./components/FinancialsHub').then(m => ({ default: m.FinancialsHub })));
 const FinancialsHubV4 = lazy(() => import('./components/financials/FinancialsHubV4').then(m => ({ default: m.FinancialsHubV4 })));
 const ProjectAccounting = lazy(() => import('./components/ProjectAccounting').then(m => ({ default: m.ProjectAccounting })));
 const BankingTreasury = lazy(() => import('./components/BankingTreasury').then(m => ({ default: m.BankingTreasury })));
@@ -119,16 +117,12 @@ const ReportViewer = lazy(() => import('./components/reports/ReportViewer').then
 const ScheduledReportsDashboard = lazy(() => import('./components/reports/ScheduledReportsDashboard').then(m => ({ default: m.default })));
 
 // V3.0 Cycle Workspaces
-const SellCyclesWorkspace = lazy(() => import('./components/SellCyclesWorkspace').then(m => ({ default: m.SellCyclesWorkspace })));
 const SellCyclesWorkspaceV4 = lazy(() => import('./components/sell-cycles/SellCyclesWorkspaceV4').then(m => ({ default: m.SellCyclesWorkspaceV4 })));
 const SellCycleDetails = lazy(() => import('./components/SellCycleDetailsV4').then(m => ({ default: m.SellCycleDetailsV4 })));
-const PurchaseCyclesWorkspace = lazy(() => import('./components/PurchaseCyclesWorkspace').then(m => ({ default: m.PurchaseCyclesWorkspace })));
 const PurchaseCyclesWorkspaceV4 = lazy(() => import('./components/purchase-cycles/PurchaseCyclesWorkspaceV4').then(m => ({ default: m.PurchaseCyclesWorkspaceV4 })));
 const PurchaseCycleDetails = lazy(() => import('./components/PurchaseCycleDetailsV4').then(m => ({ default: m.PurchaseCycleDetailsV4 })));
-const RentCyclesWorkspace = lazy(() => import('./components/RentCyclesWorkspace').then(m => ({ default: m.RentCyclesWorkspace })));
 const RentCyclesWorkspaceV4 = lazy(() => import('./components/rent-cycles/RentCyclesWorkspaceV4').then(m => ({ default: m.RentCyclesWorkspaceV4 })));
 const RentCycleDetails = lazy(() => import('./components/RentCycleDetailsV4').then(m => ({ default: m.RentCycleDetailsV4 })));
-const BuyerRequirementsWorkspace = lazy(() => import('./components/BuyerRequirementsWorkspace').then(m => ({ default: m.BuyerRequirementsWorkspace })));
 const BuyerRequirementsWorkspaceV4 = lazy(() => import('./components/requirements/BuyerRequirementsWorkspaceV4').then(m => ({ default: m.BuyerRequirementsWorkspaceV4 })));
 const BuyerRequirementDetailsV4 = lazy(() => import('./components/BuyerRequirementDetailsV4').then(m => ({ default: m.BuyerRequirementDetailsV4 })));
 const RentRequirementsWorkspace = lazy(() => import('./components/RentRequirementsWorkspace').then(m => ({ default: m.RentRequirementsWorkspace })));
@@ -446,7 +440,7 @@ function App() {
       queryParams = parsed.queryParams;
 
       // Validate page parameter using centralized route registry
-      if (!routesModule.isValidRoute(pageName)) {
+      if (!isValidRoute(pageName)) {
         logger.warn(`Invalid navigation page: ${page} (path: ${pageName}), redirecting to dashboard`);
         setActiveTab('dashboard');
         return;
@@ -1156,10 +1150,30 @@ function App() {
               </div>
             );
           }
-          return <SellCyclesWorkspace user={user} onViewDetails={(cycle) => {
-            setSelectedSellCycle(cycle);
-            setActiveTab('sell-cycle-details');
-          }} />;
+          return <SellCyclesWorkspaceV4
+            user={user}
+            onNavigate={(section, id) => {
+              if (section === 'sell-cycle-details' && id) {
+                const sellCycle = getSellCycleById(id);
+                if (sellCycle) {
+                  setSelectedSellCycle(sellCycle);
+                  setActiveTab('sell-cycle-details');
+                }
+              }
+            }}
+            onStartNew={() => {
+              toast.info('Please select a property first from the Properties page', {
+                description: 'Sell cycles must be linked to a property',
+                action: {
+                  label: 'Go to Properties',
+                  onClick: () => setActiveTab('properties'),
+                },
+              });
+            }}
+            onEditCycle={(cycle) => {
+              toast.info('Edit Sell Cycle - Integration coming soon');
+            }}
+          />;
 
         case 'purchase-cycles':
           return <PurchaseCyclesWorkspaceV4
