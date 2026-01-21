@@ -20,13 +20,10 @@
  * 5. Activity - Timeline of all activities
  */
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Property, User, SellCycle, PurchaseCycle, RentCycle } from '../types';
 import { PropertyAddressDisplay, useFormattedAddress } from './PropertyAddressDisplay';
-import { PageHeader } from './layout/PageHeader';
-import { ConnectedEntitiesBar } from './layout/ConnectedEntitiesBar';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
 
 // DetailPageTemplate System
 import {
@@ -80,8 +77,6 @@ import {
   Plus,
   Key,
   Award,
-  Activity as ActivityIcon,
-  Percent,
 } from 'lucide-react';
 
 // Business Logic
@@ -125,6 +120,24 @@ export function PropertyDetailsV4({
   const safeSellCycles = sellCycles || [];
   const safePurchaseCycles = purchaseCycles || [];
   const safeRentCycles = rentCycles || [];
+
+  // CRITICAL FIX: Get display price - prioritize active sell cycle's askingPrice
+  const getDisplayPrice = () => {
+    // Find the first active (listed) sell cycle
+    const activeSellCycle = safeSellCycles.find(
+      cycle => cycle.status === 'listed' || 
+               property.activeSellCycleIds?.includes(cycle.id)
+    );
+    
+    // Use sell cycle asking price if available, otherwise fall back to property price
+    if (activeSellCycle?.askingPrice) {
+      return activeSellCycle.askingPrice;
+    }
+    
+    return property.price || 0;
+  };
+
+  const displayPrice = getDisplayPrice();
 
   // ==================== INVESTOR SYNDICATION STATE ====================
   // const [showMultiInvestorModal, setShowMultiInvestorModal] = useState(false);
@@ -215,7 +228,7 @@ export function PropertyDetailsV4({
     metrics: [
       {
         label: 'Price',
-        value: formatPKR(property.price || 0),
+        value: formatPKR(displayPrice),
         icon: <DollarSign className="w-4 h-4" />,
       },
       {
@@ -337,7 +350,7 @@ export function PropertyDetailsV4({
           },
           {
             label: 'Price',
-            value: formatPKR(property.price || 0),
+            value: formatPKR(displayPrice),
             icon: <DollarSign className="h-4 w-4" />,
           },
           {
@@ -594,11 +607,11 @@ export function PropertyDetailsV4({
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium">{formatPKR(cycle.offerPrice)}</h4>
+                    <h4 className="font-medium">{formatPKR((cycle as any).offerAmount || 0)}</h4>
                     <StatusBadge status={cycle.status} />
                   </div>
                   <p className="text-sm text-gray-600">
-                    Offer made {new Date(cycle.offerDate).toLocaleDateString()}
+                    Offer made {new Date((cycle as any).offerDate || cycle.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <Button
@@ -767,11 +780,11 @@ export function PropertyDetailsV4({
       
       if (cycle.type === 'sell') {
         const sellCycle = cycle as any;
-        const price = sellCycle.askingPrice || property.price || 0;
+        const price = sellCycle.askingPrice || displayPrice || 0;
         description = `Listed for ${formatPKR(price)}`;
       } else if (cycle.type === 'purchase') {
         const purchaseCycle = cycle as any;
-        const price = purchaseCycle.offerPrice || 0;
+        const price = purchaseCycle.offerAmount || 0;
         description = `Offer made for ${formatPKR(price)}`;
       } else if (cycle.type === 'rent') {
         const rentCycle = cycle as any;
@@ -899,7 +912,7 @@ export function PropertyDetailsV4({
         }}
         property={property}
         user={user}
-        defaultSalePrice={property.price}
+        defaultSalePrice={displayPrice}
       />
     </div>
   ) : null;

@@ -124,12 +124,14 @@ export function createSellCycle(data: Partial<SellCycle>): SellCycle {
   cycles.push(newCycle);
   localStorage.setItem(SELL_CYCLES_KEY, JSON.stringify(cycles));
 
-  // Update property to link this sell cycle
+  // Update property to link this sell cycle and sync price
   const properties = getProperties();
   const property = properties.find(p => p.id === data.propertyId);
   if (property) {
     const updatedProperty: Partial<Property> = {
       activeSellCycleIds: [...(property.activeSellCycleIds || []), newCycle.id],
+      // CRITICAL FIX: Update property price to reflect the asking price from the active sell cycle
+      price: data.askingPrice || property.price,
     };
     updateProperty(data.propertyId!, updatedProperty);
   }
@@ -155,12 +157,25 @@ export function updateSellCycle(id: string, updates: Partial<SellCycle>): void {
   const index = cycles.findIndex(c => c.id === id);
 
   if (index !== -1) {
+    const cycle = cycles[index];
     cycles[index] = {
-      ...cycles[index],
+      ...cycle,
       ...updates,
       updatedAt: new Date().toISOString(),
     };
     localStorage.setItem(SELL_CYCLES_KEY, JSON.stringify(cycles));
+
+    // CRITICAL FIX: Update property price if askingPrice changed and this is an active cycle
+    if (updates.askingPrice !== undefined && updates.askingPrice !== cycle.askingPrice) {
+      const property = getProperties().find(p => p.id === cycle.propertyId);
+      if (property && property.activeSellCycleIds?.includes(id)) {
+        // Only update if this is the first/primary active cycle
+        const activeCycleId = property.activeSellCycleIds[0];
+        if (activeCycleId === id) {
+          updateProperty(cycle.propertyId, { price: updates.askingPrice });
+        }
+      }
+    }
 
     // 🔄 AUTO-SYNC: Update property status if cycle status changed
     if (updates.status) {
