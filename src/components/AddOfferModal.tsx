@@ -43,12 +43,31 @@ export function AddOfferModal({
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.buyerName || !formData.offerAmount) {
-      toast.error('Please fill in required fields');
+    // Reset errors
+    setErrors({});
+    
+    // Validation
+    if (!formData.buyerName) {
+      setErrors({ buyerName: 'Buyer name is required' });
+      toast.error('Please enter buyer name');
+      return;
+    }
+    
+    if (!formData.offerAmount || formData.offerAmount <= 0) {
+      setErrors({ offerAmount: 'Offer amount must be greater than 0' });
+      toast.error('Please enter a valid offer amount');
+      return;
+    }
+    
+    // CRITICAL: Validate token amount doesn't exceed offer amount
+    if (formData.tokenAmount > formData.offerAmount) {
+      setErrors({ tokenAmount: 'Token money cannot exceed offer amount' });
+      toast.error('Token money cannot exceed offer amount');
       return;
     }
     
@@ -89,7 +108,46 @@ export function AddOfferModal({
       notes: '',
       agentNotes: '',
     });
+    setErrors({});
     onClose();
+  };
+
+  // Handle offer amount change - auto-adjust token if it exceeds new offer
+  const handleOfferAmountChange = (value: number) => {
+    const newOfferAmount = value || 0;
+    let newTokenAmount = formData.tokenAmount;
+    
+    // If token amount exceeds new offer amount, cap it at offer amount
+    if (newTokenAmount > newOfferAmount) {
+      newTokenAmount = newOfferAmount;
+    }
+    
+    setFormData({
+      ...formData,
+      offerAmount: newOfferAmount,
+      tokenAmount: newTokenAmount,
+    });
+    
+    // Clear errors when user corrects
+    if (errors.tokenAmount) {
+      setErrors({ ...errors, tokenAmount: '' });
+    }
+  };
+
+  // Handle token amount change - validate in real-time
+  const handleTokenAmountChange = (value: number) => {
+    const newTokenAmount = value || 0;
+    const newErrors = { ...errors };
+    
+    // Validate token amount doesn't exceed offer amount
+    if (newTokenAmount > formData.offerAmount) {
+      newErrors.tokenAmount = 'Token money cannot exceed offer amount';
+    } else {
+      delete newErrors.tokenAmount;
+    }
+    
+    setFormData({ ...formData, tokenAmount: newTokenAmount });
+    setErrors(newErrors);
   };
 
   const percentageOfAsking = ((formData.offerAmount / askingPrice) * 100).toFixed(1);
@@ -186,25 +244,54 @@ export function AddOfferModal({
                   id="offerAmount"
                   type="number"
                   value={formData.offerAmount}
-                  onChange={(e) => setFormData({ ...formData, offerAmount: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => handleOfferAmountChange(parseFloat(e.target.value) || 0)}
                   placeholder="0"
                   required
                   min="0"
-                  step="1000"
+                  step="1"
+                  className={errors.offerAmount ? 'border-red-500' : ''}
                 />
+                {errors.offerAmount && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <span>⚠</span> {errors.offerAmount}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="tokenAmount">Token Money (PKR)</Label>
+                <Label htmlFor="tokenAmount">
+                  Token Money (PKR)
+                  {formData.offerAmount > 0 && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (Max: {formData.offerAmount.toLocaleString()})
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="tokenAmount"
                   type="number"
                   value={formData.tokenAmount}
-                  onChange={(e) => setFormData({ ...formData, tokenAmount: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => handleTokenAmountChange(parseFloat(e.target.value) || 0)}
                   placeholder="0"
                   min="0"
-                  step="1000"
+                  max={formData.offerAmount || undefined}
+                  step="1"
+                  className={errors.tokenAmount ? 'border-red-500' : ''}
                 />
+                {errors.tokenAmount ? (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <span>⚠</span> {errors.tokenAmount}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {formData.offerAmount > 0 
+                      ? `${((formData.tokenAmount / formData.offerAmount) * 100).toFixed(1)}% of offer`
+                      : '0.0% of offer'}
+                    {formData.offerAmount > 0 && formData.tokenAmount > 0 && formData.tokenAmount <= formData.offerAmount && (
+                      <span className="ml-2 text-green-600">✓ Valid</span>
+                    )}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -282,7 +369,10 @@ export function AddOfferModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || Object.keys(errors).length > 0 || formData.tokenAmount > formData.offerAmount}
+            >
               {isSubmitting ? 'Recording...' : 'Record Offer'}
             </Button>
           </div>

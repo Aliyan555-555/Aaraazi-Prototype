@@ -205,6 +205,20 @@ export function addOffer(sellCycleId: string, offer: Partial<Offer>): Offer {
     throw new Error('Sell cycle not found');
   }
 
+  // CRITICAL VALIDATION: Validate offer data before creating
+  if (!offer.offerAmount || offer.offerAmount <= 0) {
+    throw new Error('Offer amount must be greater than 0');
+  }
+
+  if (!offer.buyerName || offer.buyerName.trim() === '') {
+    throw new Error('Buyer name is required');
+  }
+
+  // CRITICAL: Validate token amount doesn't exceed offer amount
+  if (offer.tokenAmount !== undefined && offer.tokenAmount > offer.offerAmount) {
+    throw new Error('Token money cannot exceed offer amount');
+  }
+
   const newOffer: Offer = {
     id: `offer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     buyerId: offer.buyerId!,
