@@ -159,6 +159,22 @@ export function PropertyCard({
               {property.propertyType}
             </Badge>
           </div>
+          {/* Features Tags - Show after property type with light green style */}
+          {property.features && Array.isArray(property.features) && property.features.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+              {property.features.map((feature, index) => {
+                if (!feature || typeof feature !== 'string') return null;
+                return (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 border border-green-200/50"
+                  >
+                    {feature}
+                  </span>
+                );
+              })}
+            </div>
+          )}
           <p className="text-muted-foreground">
             Owner: {property.currentOwnerName || 'Not specified'}
           </p>

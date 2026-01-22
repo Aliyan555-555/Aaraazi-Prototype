@@ -41,6 +41,7 @@ import {
 import { InfoPanel } from './ui/info-panel';
 import { StatusTimeline } from './ui/status-timeline';
 import { StatusBadge } from './layout/StatusBadge';
+import { Badge } from './ui/badge';
 
 // Investor Syndication Components
 // TODO: MultiInvestorPurchaseModal and InvestorSharesCard need to be implemented
@@ -383,6 +384,26 @@ export function PropertyDetailsV4({
                   label: 'Construction Year',
                   value: property.constructionYear.toString(),
                   icon: <Calendar className="h-4 w-4" />,
+                },
+              ]
+            : []),
+          ...(property.features && Array.isArray(property.features) && property.features.length > 0
+            ? [
+                {
+                  label: 'Features',
+                  value: (
+                    <div className="flex flex-wrap gap-2">
+                      {property.features.map((feature, index) => {
+                        if (!feature || typeof feature !== 'string') return null;
+                        return (
+                          <Badge key={index} variant="outline" className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200/50"
+                          style={{ fontSize: 'var(--text-xs)' }}>
+                            {feature}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  ),
                 },
               ]
             : []),

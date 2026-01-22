@@ -87,17 +87,22 @@ export const PropertyWorkspaceCard: React.FC<PropertyWorkspaceCardProps> = ({
     return typeLabels[property.propertyType] || property.propertyType;
   };
 
-  // Determine tags
+  // Determine tags - show all features as tags with light green style
   const tags: Array<{ label: string; variant: 'default' | 'success' | 'info' | 'warning' }> = [];
 
-  if (property.features?.includes('Corner Plot')) {
-    tags.push({ label: 'Corner', variant: 'info' });
+  // Add all features as tags (all will use the same light green style)
+  if (property.features && Array.isArray(property.features) && property.features.length > 0) {
+    property.features.forEach((feature) => {
+      if (feature && typeof feature === 'string') {
+        // All features use the same style (light green) as shown in the design
+        tags.push({ label: feature, variant: 'default' });
+      }
+    });
   }
-  if (property.features?.includes('Park Facing')) {
-    tags.push({ label: 'Park Facing', variant: 'success' });
-  }
-  if (property.isInternalListing) {
-    tags.push({ label: 'Internal', variant: 'warning' });
+
+  // Add internal listing tag if applicable
+  if (property.isInternalListing && !tags.some(t => t.label.toLowerCase().includes('internal'))) {
+    tags.push({ label: 'Internal', variant: 'default' });
   }
 
   // Calculate days since listing (from createdAt)
@@ -158,7 +163,7 @@ export const PropertyWorkspaceCard: React.FC<PropertyWorkspaceCardProps> = ({
       imageFallback={<Home className="h-12 w-12 text-gray-400" />}
       status={status}
       metadata={displayMetadata}
-      tags={tags.slice(0, 3)}
+      tags={tags}
       footer={
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-1 text-gray-600">

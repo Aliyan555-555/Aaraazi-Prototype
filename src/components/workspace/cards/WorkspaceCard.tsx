@@ -100,7 +100,8 @@ export const WorkspaceCard = React.memo<WorkspaceCardProps>(({
 }) => {
   // Limit metadata to 5 items (Miller's Law)
   const visibleMetadata = metadata.slice(0, 5);
-  const visibleTags = tags.slice(0, 3);
+  // Show up to 5 tags for features (reasonable limit to avoid clutter)
+  const visibleTags = tags.slice(0, 5);
 
   return (
     <div
@@ -147,20 +148,24 @@ export const WorkspaceCard = React.memo<WorkspaceCardProps>(({
 
       {/* Image */}
       {(image || imageFallback) && (
-        <div className="relative w-full h-48 bg-gray-100 overflow-hidden rounded-t-lg">
-          {image ? (
-            <img
-              src={image}
-              alt={title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              {imageFallback}
-            </div>
-          )}
-        </div>
+        <>
+          <div className="relative w-full h-48 bg-gray-100 overflow-hidden rounded-t-lg">
+            {image ? (
+              <img
+                src={image}
+                alt={title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                {imageFallback}
+              </div>
+            )}
+          </div>
+          {/* Feature Tags - Positioned directly under image */}
+      
+        </>
       )}
 
       {/* Content */}
@@ -197,17 +202,17 @@ export const WorkspaceCard = React.memo<WorkspaceCardProps>(({
           )}
         </div>
 
-        {/* Tags */}
-        {visibleTags.length > 0 && (
+        {/* Tags - Only show if no image (fallback for cards without images) */}
+        { (
           <div className="flex flex-wrap gap-2 mb-3">
             {visibleTags.map((tag, index) => (
-              <Badge
+              <span
                 key={index}
-                variant={tag.variant || 'secondary'}
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200/50"
                 style={{ fontSize: 'var(--text-xs)' }}
               >
                 {tag.label}
-              </Badge>
+              </span>
             ))}
           </div>
         )}
