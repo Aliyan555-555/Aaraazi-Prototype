@@ -8,6 +8,8 @@ import { getSellCycleById, updateSellCycle, saveSellCycle } from './sellCycle';
 import { transferOwnership } from './ownership';
 import { getProperties, updateProperty } from './data';
 import { saveTransaction } from './transactions';
+import { syncDealToAllCycles as syncDealToAllCyclesFromSync } from './dealSync';
+import { syncPropertyStatusFromSellCycle } from './propertyStatusSync';
 
 const DEALS_KEY = 'aaraazi_deals_v4';
 
@@ -240,7 +242,7 @@ export const createDealFromOffer = (
   try {
     // Sync to all cycles - handled by caller in Sell/Purchase Cycle for better data integrity
     // But we still attempt basic sync here
-    syncDealToAllCycles(deal);
+    syncDealToAllCyclesFromSync(deal);
   } catch (error) {
     console.warn('Sync failed in createDealFromOffer, caller should handle it:', error);
   }
@@ -561,7 +563,7 @@ export const createDealFromPurchaseCycle = (
   }
 
   // Sync to purchase cycle
-  syncDealToAllCycles(deal);
+  syncDealToAllCyclesFromSync(deal);
 
   // Create notifications
   createDealNotifications(deal);
@@ -1168,7 +1170,7 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
 
           // CRITICAL FIX: Update property status to 'sold'
           updateProperty(sellCycle.propertyId, {
-            currentStatus: 'sold',
+            status: 'sold',
             updatedAt: now,
           });
 
@@ -1312,7 +1314,17 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
   deals[dealIndex] = deal;
   saveDeals(deals);
 
-  syncDealToAllCycles(deal);
+  // Use the proper sync function from dealSync.ts that updates cycle statuses
+  syncDealToAllCyclesFromSync(deal);
+  
+  // Also ensure property status is synced (updateSellCycle already triggers this, but double-check)
+  if (deal.cycles.sellCycle) {
+    try {
+      syncPropertyStatusFromSellCycle(deal.cycles.sellCycle.id);
+    } catch (error) {
+      console.error('Error syncing property status:', error);
+    }
+  }
 
   // Dispatch event to notify property components to reload
   const propertyId = deal.cycles.sellCycle?.propertyId;
@@ -1393,7 +1405,7 @@ export const cancelDeal = (dealId: string, reason: string, agentId: string, agen
   deals[dealIndex] = deal;
   saveDeals(deals);
 
-  syncDealToAllCycles(deal);
+  syncDealToAllCyclesFromSync(deal);
 
   return deal;
 };

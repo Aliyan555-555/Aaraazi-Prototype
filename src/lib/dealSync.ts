@@ -69,6 +69,7 @@ const syncToSellCycle = (deal: Deal): void => {
   
   // If deal is completed, mark sell cycle as sold
   if (deal.lifecycle.status === 'completed') {
+    updates.status = 'sold';
     updates.soldDate = deal.lifecycle.timeline.actualClosingDate || new Date().toISOString();
   }
   
@@ -139,7 +140,7 @@ const updatePropertyFromDeal = (deal: Deal): void => {
   const newStatus = getDealStageToPropertyStatus(deal.lifecycle.stage, deal.lifecycle.status);
   
   updateProperty(property.id, {
-    currentStatus: newStatus,
+    status: newStatus,
     updatedAt: new Date().toISOString(),
   });
 };
@@ -193,10 +194,10 @@ const getDealStageToPurchaseCycleStatus = (stage: string, dealStatus: string): P
  * Map deal stage to property status
  */
 const getDealStageToPropertyStatus = (stage: string, dealStatus: string): string => {
-  if (dealStatus === 'cancelled') return 'For Sale'; // Return to market
-  if (dealStatus === 'completed') return 'Sold';
+  if (dealStatus === 'cancelled') return 'available'; // Return to market
+  if (dealStatus === 'completed') return 'sold';
   
-  return 'Under Contract';
+  return 'under-offer'; // PropertyStatus type: 'available' | 'sold' | 'rented' | 'under-offer'
 };
 
 /**

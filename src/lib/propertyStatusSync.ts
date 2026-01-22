@@ -35,10 +35,11 @@ export function determinePropertyStatus(propertyId: string): Property['status'] 
   }
 
   // Priority 2: Check if property is UNDER CONTRACT (any cycle type)
+  // PropertyStatus type: 'available' | 'sold' | 'rented' | 'under-offer'
   const underContractSellCycle = sellCycles.find(c => c.status === 'under-contract');
   const underContractPurchaseCycle = purchaseCycles.find(c => c.status === 'under-contract');
   if (underContractSellCycle || underContractPurchaseCycle) {
-    return 'under_contract';
+    return 'under-offer'; // Use 'under-offer' which is valid PropertyStatus
   }
 
   // Priority 3: Check if property is LEASED
@@ -46,7 +47,7 @@ export function determinePropertyStatus(propertyId: string): Property['status'] 
     c.status === 'leased' || c.status === 'active-lease'
   );
   if (leasedRentCycle) {
-    return 'leased';
+    return 'rented'; // Use 'rented' which is valid PropertyStatus
   }
 
   // Priority 4: Check if property is FOR RENT (active rent marketing)
@@ -57,7 +58,7 @@ export function determinePropertyStatus(propertyId: string): Property['status'] 
     c.status === 'negotiation'
   );
   if (activeRentCycle) {
-    return 'for_rent';
+    return 'available'; // Use 'available' for active marketing
   }
 
   // Priority 5: Check if property is FOR SALE (active sell marketing)
@@ -68,7 +69,7 @@ export function determinePropertyStatus(propertyId: string): Property['status'] 
     c.status === 'negotiation'
   );
   if (activeSellCycle) {
-    return 'for_sale';
+    return 'available'; // Use 'available' for active marketing
   }
 
   // Priority 6: Check if property was acquired through purchase cycle
@@ -101,16 +102,18 @@ export function syncPropertyStatusFromSellCycle(sellCycleId: string): void {
   const newStatus = determinePropertyStatus(sellCycle.propertyId);
   
   // Only update if status actually changed
-  if (property.currentStatus !== newStatus) {
-    console.log(`Syncing property ${property.id} currentStatus: ${property.currentStatus} → ${newStatus}`);
-    updateProperty(property.id, { currentStatus: newStatus });
+  // Use property.status (not currentStatus) as that's the correct field name
+  const currentStatus = property.status || (property as any).currentStatus || 'available';
+  if (currentStatus !== newStatus) {
+    console.log(`Syncing property ${property.id} status: ${currentStatus} → ${newStatus}`);
+    updateProperty(property.id, { status: newStatus });
     
     // Dispatch custom event for UI updates
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('propertyStatusChanged', {
         detail: {
           propertyId: property.id,
-          oldStatus: property.currentStatus,
+          oldStatus: currentStatus,
           newStatus: newStatus,
           triggeredBy: 'sell-cycle',
           cycleId: sellCycleId
@@ -125,7 +128,7 @@ export function syncPropertyStatusFromSellCycle(sellCycleId: string): void {
           type: 'entity-status-changed',
           entityType: 'property',
           statusChange: {
-            from: property.currentStatus,
+            from: currentStatus,
             to: newStatus,
           },
         },
@@ -139,7 +142,7 @@ export function syncPropertyStatusFromSellCycle(sellCycleId: string): void {
       );
       
       if (createdTasks.length > 0) {
-        console.log(`📋 Created ${createdTasks.length} automated task(s) for property status change: ${property.currentStatus} → ${newStatus}`);
+        console.log(`📋 Created ${createdTasks.length} automated task(s) for property status change: ${currentStatus} → ${newStatus}`);
       }
     } catch (error) {
       console.error('Error triggering property automation:', error);
@@ -166,16 +169,18 @@ export function syncPropertyStatusFromPurchaseCycle(purchaseCycleId: string): vo
   const newStatus = determinePropertyStatus(purchaseCycle.propertyId);
   
   // Only update if status actually changed
-  if (property.currentStatus !== newStatus) {
-    console.log(`Syncing property ${property.id} currentStatus: ${property.currentStatus} → ${newStatus}`);
-    updateProperty(property.id, { currentStatus: newStatus });
+  // Use property.status (not currentStatus) as that's the correct field name
+  const currentStatus = property.status || (property as any).currentStatus || 'available';
+  if (currentStatus !== newStatus) {
+    console.log(`Syncing property ${property.id} status: ${currentStatus} → ${newStatus}`);
+    updateProperty(property.id, { status: newStatus });
     
     // Dispatch custom event for UI updates
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('propertyStatusChanged', {
         detail: {
           propertyId: property.id,
-          oldStatus: property.currentStatus,
+          oldStatus: currentStatus,
           newStatus: newStatus,
           triggeredBy: 'purchase-cycle',
           cycleId: purchaseCycleId
@@ -190,7 +195,7 @@ export function syncPropertyStatusFromPurchaseCycle(purchaseCycleId: string): vo
           type: 'entity-status-changed',
           entityType: 'property',
           statusChange: {
-            from: property.currentStatus,
+            from: currentStatus,
             to: newStatus,
           },
         },
@@ -204,7 +209,7 @@ export function syncPropertyStatusFromPurchaseCycle(purchaseCycleId: string): vo
       );
       
       if (createdTasks.length > 0) {
-        console.log(`📋 Created ${createdTasks.length} automated task(s) for property status change: ${property.currentStatus} → ${newStatus}`);
+        console.log(`📋 Created ${createdTasks.length} automated task(s) for property status change: ${currentStatus} → ${newStatus}`);
       }
     } catch (error) {
       console.error('Error triggering property automation:', error);
@@ -231,16 +236,18 @@ export function syncPropertyStatusFromRentCycle(rentCycleId: string): void {
   const newStatus = determinePropertyStatus(rentCycle.propertyId);
   
   // Only update if status actually changed
-  if (property.currentStatus !== newStatus) {
-    console.log(`Syncing property ${property.id} currentStatus: ${property.currentStatus} → ${newStatus}`);
-    updateProperty(property.id, { currentStatus: newStatus });
+  // Use property.status (not currentStatus) as that's the correct field name
+  const currentStatus = property.status || (property as any).currentStatus || 'available';
+  if (currentStatus !== newStatus) {
+    console.log(`Syncing property ${property.id} status: ${currentStatus} → ${newStatus}`);
+    updateProperty(property.id, { status: newStatus });
     
     // Dispatch custom event for UI updates
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('propertyStatusChanged', {
         detail: {
           propertyId: property.id,
-          oldStatus: property.currentStatus,
+          oldStatus: currentStatus,
           newStatus: newStatus,
           triggeredBy: 'rent-cycle',
           cycleId: rentCycleId

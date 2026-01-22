@@ -171,14 +171,15 @@ export function PropertyDetailsV4({
     return diffDays || 1;
   }, [property.createdAt]);
 
-  // Get status
-  const currentStatus = property.currentStatus || property.status || 'available';
+  // Get status - PropertyStatus type: 'available' | 'sold' | 'rented' | 'under-offer'
+  const currentStatus = property.status || (property as any).currentStatus || 'available';
 
   // Determine property lifecycle stage based on status
   const getLifecycleStage = () => {
     if (currentStatus === 'sold' || currentStatus === 'rented') {
       return 'transaction-complete';
-    } else if (currentStatus === 'under-contract') {
+    } else if (currentStatus === 'under-offer' || currentStatus === 'under-contract' || currentStatus === 'under_contract') {
+      // Support both 'under-offer' (correct PropertyStatus) and legacy values
       return 'under-contract';
     } else if (totalActiveCycles > 0) {
       return 'active-marketing';
