@@ -96,6 +96,12 @@ export interface Deal {
           amount: number;
         };
       };
+      
+      // Commission received tracking
+      receivedFromClient?: boolean;
+      receivedAt?: string;
+      receivedBy?: string;
+      receivedByName?: string;
     };
 
     // Payments

@@ -13,11 +13,9 @@ import {
   Download,
   Upload,
   Eye,
-  DollarSign,
   MapPin,
   Home,
   CheckCircle,
-  Calendar,
 } from 'lucide-react';
 import { getRentRequirements } from '../lib/rentRequirements';
 import { formatPKR } from '../lib/currency';
@@ -60,8 +58,8 @@ export function RentRequirementsWorkspace({
     // Search filter
     if (searchQuery) {
       result = result.filter(r =>
-        r.tenantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.preferredLocation?.toLowerCase().includes(searchQuery.toLowerCase())
+        r.renterName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.preferredAreas?.some(area => area.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -72,7 +70,9 @@ export function RentRequirementsWorkspace({
 
     // Type filter
     if (selectedType.length > 0) {
-      result = result.filter(r => selectedType.includes(r.propertyType));
+      result = result.filter(r => 
+        r.propertyType?.some(type => selectedType.includes(type))
+      );
     }
 
     // Sort
@@ -84,10 +84,10 @@ export function RentRequirementsWorkspace({
         result.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
         break;
       case 'budget-high':
-        result.sort((a, b) => (b.maxBudget || 0) - (a.maxBudget || 0));
+        result.sort((a, b) => (b.budgetMax || 0) - (a.budgetMax || 0));
         break;
       case 'budget-low':
-        result.sort((a, b) => (a.maxBudget || 0) - (b.maxBudget || 0));
+        result.sort((a, b) => (a.budgetMax || 0) - (b.budgetMax || 0));
         break;
     }
 
@@ -211,7 +211,7 @@ export function RentRequirementsWorkspace({
               },
             ],
             value: selectedStatus,
-            onChange: setSelectedStatus,
+            onChange: (value) => setSelectedStatus(Array.isArray(value) ? value : []),
             multiple: true,
           },
           {
@@ -221,21 +221,21 @@ export function RentRequirementsWorkspace({
               {
                 value: 'house',
                 label: 'House',
-                count: requirements.filter(r => r.propertyType === 'house').length,
+                count: requirements.filter(r => r.propertyType?.includes('house')).length,
               },
               {
                 value: 'apartment',
                 label: 'Apartment',
-                count: requirements.filter(r => r.propertyType === 'apartment').length,
+                count: requirements.filter(r => r.propertyType?.includes('apartment')).length,
               },
               {
                 value: 'commercial',
                 label: 'Commercial',
-                count: requirements.filter(r => r.propertyType === 'commercial').length,
+                count: requirements.filter(r => r.propertyType?.includes('commercial')).length,
               },
             ],
             value: selectedType,
-            onChange: setSelectedType,
+            onChange: (value) => setSelectedType(Array.isArray(value) ? value : []),
             multiple: true,
           },
         ]}
@@ -281,10 +281,12 @@ export function RentRequirementsWorkspace({
                           <Users className="w-6 h-6 text-purple-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium">{requirement.tenantName}</h3>
+                          <h3 className="font-medium">{requirement.renterName}</h3>
                           <p className="text-sm text-gray-600 flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
-                            {requirement.preferredLocation || 'Any location'}
+                            {requirement.preferredAreas && requirement.preferredAreas.length > 0 
+                              ? requirement.preferredAreas.join(', ') 
+                              : 'Any location'}
                           </p>
                         </div>
                       </div>
@@ -294,13 +296,15 @@ export function RentRequirementsWorkspace({
                           <p className="text-xs text-gray-600">Property Type</p>
                           <p className="text-sm flex items-center gap-1 capitalize">
                             <Home className="w-3 h-3" />
-                            {requirement.propertyType}
+                            {requirement.propertyType && requirement.propertyType.length > 0
+                              ? requirement.propertyType.join(', ')
+                              : 'Any'}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600">Budget Range</p>
                           <p className="text-sm">
-                            {formatPKR(requirement.minBudget || 0)} - {formatPKR(requirement.maxBudget || 0)}
+                            {formatPKR(requirement.budgetMin || 0)} - {formatPKR(requirement.budgetMax || 0)}
                           </p>
                         </div>
                         <div>
@@ -322,7 +326,7 @@ export function RentRequirementsWorkspace({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation();
                             onViewDetails && onViewDetails(requirement);
                           }}

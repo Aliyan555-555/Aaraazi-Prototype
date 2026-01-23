@@ -57,7 +57,7 @@ export interface RentRequirement extends Partial<RequirementLeadTracking> {
     renterName: string;
     renterContact?: string;
     renterEmail?: string;
-    status: 'active' | 'fulfilled' | 'cancelled';
+    status: 'active' | 'matched' | 'viewing-scheduled' | 'converted' | 'fulfilled' | 'cancelled' | 'closed';
     createdAt: string;
     updatedAt: string;
 
@@ -66,4 +66,7 @@ export interface RentRequirement extends Partial<RequirementLeadTracking> {
     targetMoveDate?: string;
     additionalNotes?: string;
     viewings?: any[];
+    matchedProperties?: string[]; // Property IDs that match this requirement
+    rentedPropertyId?: string; // Property ID when requirement is fulfilled
+    closedAt?: string; // Date when requirement was closed
 }

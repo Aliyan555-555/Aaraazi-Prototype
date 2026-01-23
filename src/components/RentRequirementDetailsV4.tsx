@@ -140,7 +140,7 @@ export function RentRequirementDetailsV4({
   }, [requirement, user.id, user.role]);
 
   // Calculate metrics
-  const budgetRange = requirement.maxBudget - requirement.minBudget;
+  const budgetRange = (requirement.budgetMax || 0) - (requirement.budgetMin || 0);
   const daysActive = Math.floor(
     (Date.now() - new Date(requirement.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );
@@ -220,10 +220,10 @@ export function RentRequirementDetailsV4({
 
   // ==================== PAGE HEADER ====================
   const pageHeader = {
-    title: `Tenant: ${requirement.tenantName}`,
+    title: `Tenant: ${requirement.renterName}`,
     breadcrumbs: [
       { label: 'Rent Requirements', onClick: onBack },
-      { label: requirement.tenantName },
+      { label: requirement.renterName },
     ],
     description: `Managed by ${requirement.agentName} • Created ${new Date(
       requirement.createdAt
@@ -231,17 +231,17 @@ export function RentRequirementDetailsV4({
     metrics: [
       {
         label: 'Min Budget',
-        value: formatPKR(requirement.minBudget) + '/mo',
+        value: formatPKR(requirement.budgetMin || 0) + '/mo',
         icon: <DollarSign className="w-4 h-4" />,
       },
       {
         label: 'Max Budget',
-        value: formatPKR(requirement.maxBudget) + '/mo',
+        value: formatPKR(requirement.budgetMax || 0) + '/mo',
         icon: <DollarSign className="w-4 h-4" />,
       },
       {
         label: 'Lease Term',
-        value: getLeaseDurationDisplay(requirement.leaseDuration),
+        value: 'Flexible',
         icon: <Calendar className="w-4 h-4" />,
       },
       {
@@ -286,7 +286,7 @@ export function RentRequirementDetailsV4({
   const connectedEntities = [
     {
       type: 'tenant' as const,
-      name: requirement.tenantName,
+      name: requirement.renterName,
       icon: <UserCheck className="h-3 w-3" />,
       onClick: () => {},
     },
@@ -308,7 +308,7 @@ export function RentRequirementDetailsV4({
             label: 'Created',
             status: 'complete',
             date: requirement.createdAt,
-            description: `${formatPKR(requirement.maxBudget)}/mo budget`,
+            description: `${formatPKR(requirement.budgetMax || 0)}/mo budget`,
           },
           {
             label: 'Searching',
@@ -360,7 +360,7 @@ export function RentRequirementDetailsV4({
         data={[
           {
             label: 'Name',
-            value: requirement.tenantName,
+            value: requirement.renterName,
             icon: <UserCheck className="h-4 w-4" />,
           },
           {
@@ -394,12 +394,12 @@ export function RentRequirementDetailsV4({
         data={[
           {
             label: 'Min Monthly Rent',
-            value: formatPKR(requirement.minBudget) + '/mo',
+            value: formatPKR(requirement.budgetMin || 0) + '/mo',
             icon: <DollarSign className="h-4 w-4" />,
           },
           {
             label: 'Max Monthly Rent',
-            value: formatPKR(requirement.maxBudget) + '/mo',
+            value: formatPKR(requirement.budgetMax || 0) + '/mo',
             icon: <DollarSign className="h-4 w-4" />,
           },
           {
@@ -408,14 +408,18 @@ export function RentRequirementDetailsV4({
           },
           {
             label: 'Property Types',
-            value: requirement.propertyTypes
-              .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
-              .join(', '),
+            value: requirement.propertyType && requirement.propertyType.length > 0
+              ? requirement.propertyType
+                  .map((t) => String(t).charAt(0).toUpperCase() + String(t).slice(1))
+                  .join(', ')
+              : 'Any',
             icon: <Home className="h-4 w-4" />,
           },
           {
             label: 'Preferred Locations',
-            value: requirement.preferredLocations.join(', '),
+            value: requirement.preferredAreas && requirement.preferredAreas.length > 0
+              ? requirement.preferredAreas.join(', ')
+              : 'Any location',
             icon: <MapPin className="h-4 w-4" />,
           },
           {
@@ -444,7 +448,7 @@ export function RentRequirementDetailsV4({
           },
           {
             label: 'Lease Duration',
-            value: getLeaseDurationDisplay(requirement.leaseDuration),
+            value: 'Flexible',
             icon: <Calendar className="h-4 w-4" />,
           },
           {
@@ -517,10 +521,10 @@ export function RentRequirementDetailsV4({
     <>
       {/* Tenant Contact Card */}
       <ContactCard
-        name={requirement.tenantName}
+        name={requirement.renterName}
         role="tenant"
         phone={requirement.tenantContact}
-        notes={`Looking for ${getLeaseDurationDisplay(requirement.leaseDuration)} lease in ${requirement.preferredLocations.join(', ')}`}
+        notes={`Looking for rental property in ${requirement.preferredAreas && requirement.preferredAreas.length > 0 ? requirement.preferredAreas.join(', ') : 'any location'}`}
         tags={['Tenant', requirement.urgency === 'high' ? 'Urgent' : requirement.urgency]}
         onCall={() => window.open(`tel:${requirement.tenantContact}`)}
       />
@@ -561,10 +565,10 @@ export function RentRequirementDetailsV4({
         metrics={[
           {
             label: 'Monthly Rent Range',
-            value: formatPKR(requirement.maxBudget) + '/mo',
+            value: formatPKR(requirement.budgetMax || 0) + '/mo',
             icon: <DollarSign className="h-5 w-5" />,
             variant: 'success',
-            description: `${formatPKR(requirement.minBudget)}/mo min`,
+            description: `${formatPKR(requirement.budgetMin || 0)}/mo min`,
           },
           {
             label: 'Matches Found',
@@ -590,23 +594,23 @@ export function RentRequirementDetailsV4({
           {
             icon: <Home className="h-4 w-4" />,
             label: 'Property Types',
-            value: `${requirement.propertyTypes.length} type${
-              requirement.propertyTypes.length !== 1 ? 's' : ''
+            value: `${requirement.propertyType?.length || 0} type${
+              (requirement.propertyType?.length || 0) !== 1 ? 's' : ''
             }`,
             color: 'blue',
           },
           {
             icon: <MapPin className="h-4 w-4" />,
             label: 'Locations',
-            value: `${requirement.preferredLocations.length} area${
-              requirement.preferredLocations.length !== 1 ? 's' : ''
+            value: `${requirement.preferredAreas?.length || 0} area${
+              (requirement.preferredAreas?.length || 0) !== 1 ? 's' : ''
             }`,
             color: 'green',
           },
           {
             icon: <Calendar className="h-4 w-4" />,
             label: 'Lease Duration',
-            value: getLeaseDurationDisplay(requirement.leaseDuration),
+            value: 'Flexible',
             color: 'yellow',
           },
         ]}
@@ -627,7 +631,7 @@ export function RentRequirementDetailsV4({
           <div>
             <p className="text-sm text-gray-600 mb-2">Property Types</p>
             <div className="flex flex-wrap gap-2">
-              {requirement.propertyTypes.map((type, idx) => (
+              {requirement.propertyType && requirement.propertyType.map((type, idx) => (
                 <Badge key={idx} variant="secondary" className="capitalize">
                   {type}
                 </Badge>
@@ -680,7 +684,7 @@ export function RentRequirementDetailsV4({
           <h3 className="text-base font-medium">Preferred Locations</h3>
         </div>
         <div className="flex flex-wrap gap-2">
-          {requirement.preferredLocations.map((loc, idx) => (
+          {requirement.preferredAreas && requirement.preferredAreas.map((loc, idx) => (
             <Badge key={idx} variant="outline">
               {loc}
             </Badge>
@@ -689,11 +693,11 @@ export function RentRequirementDetailsV4({
       </div>
 
       {/* Must-Have Features */}
-      {requirement.mustHaveFeatures && requirement.mustHaveFeatures.length > 0 && (
+      {requirement.features && requirement.features.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-base font-medium mb-4">Must-Have Features</h3>
           <div className="flex flex-wrap gap-2">
-            {requirement.mustHaveFeatures.map((feature, idx) => (
+            {requirement.features.map((feature, idx) => (
               <Badge key={idx} className="bg-green-100 text-green-800">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 {feature}
@@ -704,11 +708,11 @@ export function RentRequirementDetailsV4({
       )}
 
       {/* Nice-to-Have Features */}
-      {requirement.niceToHaveFeatures && requirement.niceToHaveFeatures.length > 0 && (
+      {false && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-base font-medium mb-4">Nice-to-Have Features</h3>
           <div className="flex flex-wrap gap-2">
-            {requirement.niceToHaveFeatures.map((feature, idx) => (
+            {[].map((feature: string, idx: number) => (
               <Badge key={idx} variant="outline">
                 {feature}
               </Badge>
@@ -727,7 +731,7 @@ export function RentRequirementDetailsV4({
           </div>
           <div>
             <p className="text-sm text-gray-600">Lease Duration</p>
-            <p className="font-medium">{getLeaseDurationDisplay(requirement.leaseDuration)}</p>
+            <p className="font-medium">Flexible</p>
           </div>
           {requirement.petsAllowed !== undefined && (
             <div>
@@ -904,7 +908,7 @@ export function RentRequirementDetailsV4({
       id: 'created',
       type: 'created',
       title: 'Requirement created',
-      description: `Budget: ${formatPKR(requirement.minBudget)} - ${formatPKR(requirement.maxBudget)}/mo`,
+      description: `Budget: ${formatPKR(requirement.budgetMin || 0)} - ${formatPKR(requirement.budgetMax || 0)}/mo`,
       date: requirement.createdAt,
       user: requirement.agentName,
       icon: <Plus className="h-5 w-5 text-blue-600" />,

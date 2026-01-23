@@ -94,10 +94,11 @@ import {
   Phone,
   Settings,
   Plus,
+  CheckCircle,
 } from 'lucide-react';
 
 // Business Logic
-import { getDealById, progressDealStage, completeDeal, cancelDeal } from '../lib/deals';
+import { getDealById, progressDealStage, completeDeal, cancelDeal, updateDeal } from '../lib/deals';
 import { getUserRoleInDeal } from '../lib/dealPermissions';
 import { formatPKR } from '../lib/currency';
 import { toast } from 'sonner';
@@ -264,6 +265,62 @@ export const DealDetailsV4: React.FC<DealDetailsV4Props> = ({
     } catch (error) {
       console.error('Error completing deal:', error);
       toast.error('Failed to complete deal');
+    }
+  };
+
+  // Mark commission as received from client
+  const handleMarkCommissionReceived = async () => {
+    if (!deal) return;
+
+    const confirmMessage = 'Mark commission as received from client? This will update all commission statuses to "paid" and update the financial hub.';
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      const now = new Date().toISOString();
+      
+      // Update commission split statuses
+      const updatedCommission = {
+        ...deal.financial.commission,
+        split: {
+          ...deal.financial.commission.split,
+          primaryAgent: {
+            ...deal.financial.commission.split.primaryAgent,
+            status: 'paid' as const,
+          },
+          secondaryAgent: deal.financial.commission.split.secondaryAgent
+            ? {
+                ...deal.financial.commission.split.secondaryAgent,
+                status: 'paid' as const,
+              }
+            : undefined,
+        },
+        receivedFromClient: true,
+        receivedAt: now,
+        receivedBy: user.id,
+        receivedByName: user.name,
+      };
+
+      const updatedDeal = updateDeal(deal.id, {
+        financial: {
+          ...deal.financial,
+          commission: updatedCommission,
+        },
+        collaboration: {
+          ...deal.collaboration,
+          lastUpdatedBy: {
+            agentId: user.id,
+            agentName: user.name,
+            timestamp: now,
+            action: 'commission-marked-received',
+          },
+        },
+      });
+
+      setDeal(updatedDeal);
+      toast.success('Commission marked as received from client! ✅');
+    } catch (error) {
+      console.error('Error marking commission as received:', error);
+      toast.error('Failed to mark commission as received');
     }
   };
 
@@ -664,6 +721,18 @@ export const DealDetailsV4: React.FC<DealDetailsV4Props> = ({
                 label: 'Progress Stage',
                 icon: <ChevronRight className="h-4 w-4" />,
                 onClick: handleProgressStage,
+              },
+            ]
+            : []),
+          ...(deal.lifecycle.status === 'completed' &&
+            (!deal.financial.commission.receivedFromClient ||
+              deal.financial.commission.split.primaryAgent.status !== 'paid')
+            ? [
+              {
+                label: 'Mark Commission as Received',
+                icon: <CheckCircle className="h-4 w-4" />,
+                onClick: handleMarkCommissionReceived,
+                variant: 'default' as const,
               },
             ]
             : []),

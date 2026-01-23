@@ -156,13 +156,34 @@ export function generateReport(
   try {
     const template = getReportTemplate(templateId);
     if (!template) {
-      throw new Error('Template not found');
+      const errorMsg = `Template not found: ${templateId}`;
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    if (!template.config) {
+      const errorMsg = `Template ${templateId} has no configuration`;
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    if (!template.config.dataSources || template.config.dataSources.length === 0) {
+      const errorMsg = `Template ${templateId} has no data sources configured`;
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
     }
     
     const startTime = Date.now();
     
     // Generate report data
-    const data = executeReportQuery(template.config);
+    let data: ReportData;
+    try {
+      data = executeReportQuery(template.config);
+    } catch (queryError: any) {
+      const errorMsg = `Failed to execute report query: ${queryError?.message || String(queryError)}`;
+      logger.error(errorMsg, queryError);
+      throw new Error(errorMsg);
+    }
     
     const executionTime = Date.now() - startTime;
     
@@ -181,41 +202,89 @@ export function generateReport(
     };
     
     // Save to history
-    saveReportHistory({
-      id: `history-${Date.now()}`,
-      reportId: report.id,
-      templateId: template.id,
-      templateName: template.name,
-      executedAt: report.generatedAt,
-      executedBy: userId,
-      executedByName: userName,
-      status: 'success',
-      rowCount: data.rowCount,
-      executionTime,
-      parameters: report.parameters,
-      actions: [
-        {
-          id: `action-${Date.now()}`,
-          type: 'generated',
-          performedAt: new Date().toISOString(),
-          performedBy: userId,
-        },
-      ],
-    });
+    try {
+      saveReportHistory({
+        id: `history-${Date.now()}`,
+        reportId: report.id,
+        templateId: template.id,
+        templateName: template.name,
+        executedAt: report.generatedAt,
+        executedBy: userId,
+        executedByName: userName,
+        status: 'success',
+        rowCount: data.rowCount,
+        executionTime,
+        parameters: report.parameters,
+        actions: [
+          {
+            id: `action-${Date.now()}`,
+            type: 'generated',
+            performedAt: new Date().toISOString(),
+            performedBy: userId,
+          },
+        ],
+      });
+    } catch (historyError) {
+      logger.warn('Failed to save report history:', historyError);
+      // Continue even if history save fails
+    }
     
     // Update template generation count
-    template.generationCount += 1;
-    template.lastGenerated = new Date().toISOString();
-    saveReportTemplate(template);
+    try {
+      template.generationCount += 1;
+      template.lastGenerated = new Date().toISOString();
+      saveReportTemplate(template);
+    } catch (templateError) {
+      logger.warn('Failed to update template:', templateError);
+      // Continue even if template update fails
+    }
     
     // Save generated report
-    saveGeneratedReport(report);
+    try {
+      saveGeneratedReport(report);
+    } catch (saveError) {
+      logger.warn('Failed to save generated report:', saveError);
+      // Continue even if save fails
+    }
     
-    logger.info('Report generated:', report.id, `(${executionTime}ms)`);
+    logger.info('Report generated:', report.id, `(${executionTime}ms)`, `Rows: ${data.rowCount}`);
     
     return report;
-  } catch (error) {
-    logger.error('Failed to generate report:', error);
+  } catch (error: any) {
+    const errorMsg = error?.message || String(error) || 'Unknown error';
+    logger.error('Failed to generate report:', errorMsg, error);
+    
+    // Try to save error to history if possible
+    try {
+      const template = getReportTemplate(templateId);
+      if (template) {
+        saveReportHistory({
+          id: `history-${Date.now()}`,
+          reportId: '',
+          templateId: template.id,
+          templateName: template.name,
+          executedAt: new Date().toISOString(),
+          executedBy: userId,
+          executedByName: userName,
+          status: 'failed',
+          rowCount: 0,
+          executionTime: 0,
+          parameters: {},
+          error: errorMsg,
+          actions: [
+            {
+              id: `action-${Date.now()}`,
+              type: 'failed',
+              performedAt: new Date().toISOString(),
+              performedBy: userId,
+            },
+          ],
+        });
+      }
+    } catch (historyError) {
+      // Ignore history save errors
+    }
+    
     return null;
   }
 }
@@ -224,47 +293,90 @@ export function generateReport(
  * Execute report query and return data
  */
 function executeReportQuery(config: ReportConfig): ReportData {
-  // Get raw data from all sources
-  const rawData = fetchDataFromSources(config.dataSources);
-  
-  // Apply date range filter
-  let filteredData = applyDateRangeFilter(rawData, config.dateRange);
-  
-  // Apply custom filters
-  filteredData = applyFilters(filteredData, config.filters);
-  
-  // Apply dimensions (grouping)
-  let processedData = config.dimensions.length > 0
-    ? applyGrouping(filteredData, config)
-    : filteredData.map((item, index) => ({ id: `row-${index}`, ...item }));
-  
-  // Apply sorting
-  if (config.sortBy && config.sortBy.length > 0) {
-    processedData = applySorting(processedData, config.sortBy);
+  try {
+    // Validate config
+    if (!config) {
+      throw new Error('Report configuration is missing');
+    }
+    
+    if (!config.dataSources || !Array.isArray(config.dataSources) || config.dataSources.length === 0) {
+      throw new Error('Report configuration has no data sources');
+    }
+    
+    // Get raw data from all sources
+    const rawData = fetchDataFromSources(config.dataSources);
+    
+    if (!Array.isArray(rawData)) {
+      console.warn('fetchDataFromSources returned non-array, converting to array');
+      return {
+        rows: [],
+        summary: {},
+        rowCount: 0,
+        filteredRowCount: 0,
+      };
+    }
+    
+    // Apply date range filter
+    let filteredData = applyDateRangeFilter(rawData, config.dateRange);
+    
+    // Apply custom filters
+    filteredData = applyFilters(filteredData, config.filters || []);
+    
+    // Apply dimensions (grouping)
+    let processedData: any[];
+    try {
+      processedData = config.dimensions && config.dimensions.length > 0
+        ? applyGrouping(filteredData, config)
+        : filteredData.map((item, index) => ({ id: `row-${index}`, ...item }));
+    } catch (groupingError) {
+      console.error('Error applying grouping:', groupingError);
+      // Fallback to simple mapping
+      processedData = filteredData.map((item, index) => ({ id: `row-${index}`, ...item }));
+    }
+    
+    // Apply sorting
+    if (config.sortBy && Array.isArray(config.sortBy) && config.sortBy.length > 0) {
+      try {
+        processedData = applySorting(processedData, config.sortBy);
+      } catch (sortError) {
+        console.error('Error applying sorting:', sortError);
+        // Continue without sorting
+      }
+    }
+    
+    // Apply limit
+    if (config.limit && typeof config.limit === 'number' && config.limit > 0) {
+      processedData = processedData.slice(0, config.limit);
+    }
+    
+    // Calculate summary statistics
+    let summary: any = {};
+    try {
+      summary = calculateSummary(processedData, config.metrics || []);
+    } catch (summaryError) {
+      console.error('Error calculating summary:', summaryError);
+      // Continue with empty summary
+    }
+    
+    // Handle comparison if enabled
+    let comparisonData: ReportData | undefined;
+    if (config.comparison?.enabled) {
+      // TODO: Implement comparison logic
+    }
+    
+    return {
+      rows: processedData,
+      summary,
+      rowCount: processedData.length,
+      filteredRowCount: filteredData.length,
+      comparisonRows: comparisonData?.rows,
+      comparisonSummary: comparisonData?.summary,
+    };
+  } catch (error: any) {
+    const errorMsg = error?.message || String(error) || 'Unknown error in executeReportQuery';
+    console.error('Error executing report query:', errorMsg, error);
+    throw new Error(`Report query execution failed: ${errorMsg}`);
   }
-  
-  // Apply limit
-  if (config.limit && config.limit > 0) {
-    processedData = processedData.slice(0, config.limit);
-  }
-  
-  // Calculate summary statistics
-  const summary = calculateSummary(processedData, config.metrics);
-  
-  // Handle comparison if enabled
-  let comparisonData: ReportData | undefined;
-  if (config.comparison?.enabled) {
-    // TODO: Implement comparison logic
-  }
-  
-  return {
-    rows: processedData,
-    summary,
-    rowCount: processedData.length,
-    filteredRowCount: filteredData.length,
-    comparisonRows: comparisonData?.rows,
-    comparisonSummary: comparisonData?.summary,
-  };
 }
 
 /**
@@ -276,40 +388,63 @@ function fetchDataFromSources(dataSources: any[]): any[] {
   dataSources.forEach(source => {
     let moduleData: any[] = [];
     
-    switch (source.module) {
-      case 'properties':
-        moduleData = JSON.parse(localStorage.getItem('estate_properties') || '[]');
-        break;
-      case 'leads':
-        moduleData = JSON.parse(localStorage.getItem('aaraazi_leads_v4') || '[]');
-        break;
-      case 'contacts':
-        moduleData = JSON.parse(localStorage.getItem('crm_contacts') || '[]');
-        break;
-      case 'deals':
-        moduleData = [
-          ...JSON.parse(localStorage.getItem('aaraazi_sell_cycles') || '[]'),
-          ...JSON.parse(localStorage.getItem('aaraazi_purchase_cycles') || '[]'),
-          ...JSON.parse(localStorage.getItem('aaraazi_rent_cycles') || '[]'),
-        ];
-        break;
-      case 'financials':
-        moduleData = [
-          ...JSON.parse(localStorage.getItem('estate_commissions') || '[]'),
-          ...JSON.parse(localStorage.getItem('estate_expenses') || '[]'),
-          ...JSON.parse(localStorage.getItem('agency_transactions') || '[]'),
-        ];
-        break;
-      case 'portfolio':
-        moduleData = JSON.parse(localStorage.getItem('estate_properties') || '[]')
-          .filter((p: any) => p.acquisitionType === 'inventory');
-        break;
-      case 'requirements':
-        moduleData = [
-          ...JSON.parse(localStorage.getItem('buyer_requirements') || '[]'),
-          ...JSON.parse(localStorage.getItem('rent_requirements') || '[]'),
-        ];
-        break;
+    try {
+      switch (source.module) {
+        case 'properties':
+          moduleData = JSON.parse(localStorage.getItem('estate_properties') || '[]');
+          break;
+        case 'leads':
+          // Try multiple possible keys for leads
+          moduleData = JSON.parse(
+            localStorage.getItem('aaraazi_leads_v4') || 
+            localStorage.getItem('aaraazi_leads_v2') ||
+            localStorage.getItem('estate_leads') || 
+            '[]'
+          );
+          break;
+        case 'contacts':
+          moduleData = JSON.parse(localStorage.getItem('crm_contacts') || '[]');
+          break;
+        case 'deals':
+          // Include actual deals and all cycle types
+          moduleData = [
+            ...JSON.parse(localStorage.getItem('aaraazi_deals_v4') || '[]'),
+            ...JSON.parse(localStorage.getItem('sell_cycles_v3') || '[]'),
+            ...JSON.parse(localStorage.getItem('purchase_cycles_v3') || '[]'),
+            ...JSON.parse(localStorage.getItem('rent_cycles_v3') || '[]'),
+            // Legacy keys for backward compatibility
+            ...JSON.parse(localStorage.getItem('estatemanager_sell_cycles') || '[]'),
+            ...JSON.parse(localStorage.getItem('estatemanager_purchase_cycles') || '[]'),
+          ];
+          break;
+        case 'financials':
+          moduleData = [
+            ...JSON.parse(localStorage.getItem('estate_commissions') || '[]'),
+            ...JSON.parse(localStorage.getItem('estate_expenses') || '[]'),
+            ...JSON.parse(localStorage.getItem('agency_transactions') || '[]'),
+          ];
+          break;
+        case 'portfolio':
+          moduleData = JSON.parse(localStorage.getItem('estate_properties') || '[]')
+            .filter((p: any) => p.acquisitionType === 'inventory');
+          break;
+        case 'requirements':
+          // Use correct keys for requirements
+          moduleData = [
+            ...JSON.parse(localStorage.getItem('buyer_requirements_v3') || '[]'),
+            ...JSON.parse(localStorage.getItem('estatemanager_rent_requirements_v3') || '[]'),
+            // Legacy keys for backward compatibility
+            ...JSON.parse(localStorage.getItem('buyer_requirements') || '[]'),
+            ...JSON.parse(localStorage.getItem('rent_requirements') || '[]'),
+          ];
+          break;
+        default:
+          console.warn(`Unknown data source module: ${source.module}`);
+      }
+    } catch (error) {
+      console.error(`Error fetching data from source ${source.module}:`, error);
+      // Continue with empty array instead of breaking
+      moduleData = [];
     }
     
     allData.push(...moduleData);
@@ -321,26 +456,56 @@ function fetchDataFromSources(dataSources: any[]): any[] {
 /**
  * Apply date range filter to data
  */
-function applyDateRangeFilter(data: any[], dateRange: DateRangeConfig): any[] {
-  if (!dateRange || dateRange.type === 'preset' && dateRange.preset === 'all-time') {
+function applyDateRangeFilter(data: any[], dateRange: DateRangeConfig | undefined): any[] {
+  if (!dateRange) {
     return data;
   }
   
-  const { startDate, endDate } = getDateRangeBounds(dateRange);
+  if (dateRange.type === 'preset' && dateRange.preset === 'all-time') {
+    return data;
+  }
   
-  return data.filter(item => {
-    const itemDate = item.createdAt || item.date || item.startDate;
-    if (!itemDate) return false;
+  try {
+    const { startDate, endDate } = getDateRangeBounds(dateRange);
     
-    const date = new Date(itemDate);
-    return date >= new Date(startDate) && date <= new Date(endDate);
-  });
+    return data.filter(item => {
+      try {
+        // Try multiple possible date fields
+        const itemDate = item.createdAt || item.date || item.startDate || item.updatedAt || item.timestamp;
+        if (!itemDate) return true; // Include items without dates rather than excluding them
+        
+        const date = new Date(itemDate);
+        if (isNaN(date.getTime())) return true; // Invalid date, include it
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        return date >= start && date <= end;
+      } catch (error) {
+        // If date parsing fails, include the item
+        console.warn('Error parsing date in filter:', error, item);
+        return true;
+      }
+    });
+  } catch (error) {
+    console.error('Error applying date range filter:', error);
+    // Return all data if filter fails
+    return data;
+  }
 }
 
 /**
  * Get date range bounds
  */
 function getDateRangeBounds(dateRange: DateRangeConfig): { startDate: string; endDate: string } {
+  if (!dateRange) {
+    // Default to all-time if no date range provided
+    return {
+      startDate: new Date(0).toISOString(),
+      endDate: new Date().toISOString(),
+    };
+  }
+  
   const now = new Date();
   let startDate = new Date();
   let endDate = new Date();

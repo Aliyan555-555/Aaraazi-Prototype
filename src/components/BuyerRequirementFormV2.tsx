@@ -35,6 +35,7 @@ import {
 } from '../lib/formValidation';
 import { getContacts } from '../lib/data';
 import { addBuyerRequirement } from '../lib/buyerRequirements';
+import { createRentRequirement } from '../lib/rentRequirements';
 import { toast } from 'sonner';
 import { Loader2, Users, Search, Home } from 'lucide-react';
 
@@ -294,36 +295,58 @@ export function BuyerRequirementFormV2({
     setIsSubmitting(true);
 
     try {
-      const requirementData = {
-        buyerId: formData.buyerId || `buyer-${Date.now()}`,
-        buyerName: formData.buyerName,
-        buyerPhone: formData.buyerPhone,
-        buyerEmail: formData.buyerEmail,
-        requirementType: formData.requirementType,
-        propertyType: formData.propertyType,
-        minBudget: parseFloat(formData.minBudget),
-        maxBudget: formData.maxBudget ? parseFloat(formData.maxBudget) : undefined,
-        preferredLocations: formData.preferredLocations,
-        minArea: formData.minArea ? parseFloat(formData.minArea) : undefined,
-        maxArea: formData.maxArea ? parseFloat(formData.maxArea) : undefined,
-        areaUnit: formData.areaUnit,
-        minBedrooms: formData.minBedrooms ? parseInt(formData.minBedrooms) : undefined,
-        maxBedrooms: formData.maxBedrooms ? parseInt(formData.maxBedrooms) : undefined,
-        minBathrooms: formData.minBathrooms ? parseInt(formData.minBathrooms) : undefined,
-        furnishingPreference: formData.furnishingPreference || undefined,
-        parkingRequired: formData.parkingRequired,
-        mustHaveFeatures: formData.mustHaveFeatures,
-        urgency: formData.urgency,
-        moveInDate: formData.moveInDate || undefined,
-        additionalNotes: formData.additionalNotes,
-        agentId: user.id,
-        agentName: user.name,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-      };
+      // Check if this is a rent requirement
+      if (formData.requirementType === 'rent') {
+        // Create rent requirement
+        const rentRequirementData = {
+          contactId: formData.buyerId || `renter-${Date.now()}`,
+          renterId: formData.buyerId || `renter-${Date.now()}`,
+          renterName: formData.buyerName,
+          renterContact: formData.buyerPhone,
+          renterEmail: formData.buyerEmail,
+          propertyType: formData.propertyType ? [formData.propertyType] : [],
+          budgetMin: parseFloat(formData.minBudget),
+          budgetMax: parseFloat(formData.maxBudget),
+          preferredAreas: formData.preferredLocations,
+          minBedrooms: formData.minBedrooms ? parseInt(formData.minBedrooms) : undefined,
+          maxBedrooms: formData.maxBedrooms ? parseInt(formData.maxBedrooms) : undefined,
+          minBathrooms: formData.minBathrooms ? parseInt(formData.minBathrooms) : undefined,
+          features: formData.mustHaveFeatures,
+          urgency: formData.urgency || undefined,
+          targetMoveDate: formData.moveInDate || undefined,
+          additionalNotes: formData.additionalNotes,
+          agentId: user.id,
+          agentName: user.name,
+          status: 'active' as const,
+        };
 
-      addBuyerRequirement(requirementData);
-      toast.success('Buyer requirement added successfully!');
+        createRentRequirement(rentRequirementData);
+        toast.success('Rent requirement added successfully!');
+      } else {
+        // Create buyer requirement
+        const requirementData = {
+          buyerId: formData.buyerId || `buyer-${Date.now()}`,
+          buyerName: formData.buyerName,
+          buyerContact: formData.buyerPhone,
+          propertyTypes: formData.propertyType ? [formData.propertyType] : [],
+          minBudget: parseFloat(formData.minBudget),
+          maxBudget: parseFloat(formData.maxBudget),
+          preferredLocations: formData.preferredLocations,
+          minBedrooms: formData.minBedrooms ? parseInt(formData.minBedrooms) : 0,
+          maxBedrooms: formData.maxBedrooms ? parseInt(formData.maxBedrooms) : undefined,
+          minBathrooms: formData.minBathrooms ? parseInt(formData.minBathrooms) : undefined,
+          mustHaveFeatures: formData.mustHaveFeatures,
+          urgency: (formData.urgency || 'medium') as 'low' | 'medium' | 'high',
+          targetMoveDate: formData.moveInDate || undefined,
+          additionalNotes: formData.additionalNotes,
+          agentId: user.id,
+          agentName: user.name,
+        };
+
+        addBuyerRequirement(requirementData);
+        toast.success('Buyer requirement added successfully!');
+      }
+      
       onSuccess();
     } catch (error) {
       console.error('Error adding requirement:', error);
