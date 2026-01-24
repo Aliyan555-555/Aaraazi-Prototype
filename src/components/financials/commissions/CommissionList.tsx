@@ -4,11 +4,12 @@ import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import { StatusBadge } from '../../layout/StatusBadge';
 import { formatPKR } from '../../../lib/currency';
-import { Eye, CheckCircle, XCircle, Edit, MoreVertical } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, MoreVertical, Wallet, Clock, Ban } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 
@@ -18,7 +19,7 @@ export interface CommissionAgent {
   name: string;
   amount: number;
   percentage: number;
-  status: 'pending' | 'approved' | 'paid';
+  status: 'pending' | 'approved' | 'paid' | 'cancelled';
   role?: string;
   dealId?: string;
   dealNumber?: string;
@@ -33,6 +34,8 @@ interface CommissionListProps {
   selectedCommissions: string[];
   onSelectionChange: (selected: string[]) => void;
   onViewDeal?: (dealId: string) => void;
+  onViewCommissionDetails?: (dealId: string) => void;
+  onChangeStatus?: (commissionId: string, status: 'pending' | 'approved' | 'paid' | 'cancelled') => void;
   onApprove?: (commissionId: string) => void;
   onReject?: (commissionId: string) => void;
   onMarkPaid?: (commissionId: string) => void;
@@ -78,11 +81,19 @@ export const CommissionList: React.FC<CommissionListProps> = ({
   selectedCommissions,
   onSelectionChange,
   onViewDeal,
+  onViewCommissionDetails,
+  onChangeStatus,
   onApprove,
   onReject,
   onMarkPaid,
   userRole,
 }) => {
+  const statusOptions: { value: 'pending' | 'approved' | 'paid' | 'cancelled'; label: string; icon: React.ReactNode }[] = [
+    { value: 'pending', label: 'Set to Pending', icon: <Clock className="h-4 w-4 mr-2" /> },
+    { value: 'approved', label: 'Set to Approved', icon: <CheckCircle className="h-4 w-4 mr-2" /> },
+    { value: 'paid', label: 'Set to Paid', icon: <Wallet className="h-4 w-4 mr-2" /> },
+    { value: 'cancelled', label: 'Set to Cancelled', icon: <Ban className="h-4 w-4 mr-2" /> },
+  ];
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   const handleSelectAll = (checked: boolean) => {
@@ -124,13 +135,14 @@ export const CommissionList: React.FC<CommissionListProps> = ({
             <TableHead className="text-right">Amount</TableHead>
             <TableHead className="text-right">Rate</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead className="text-right w-24">View</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {commissions.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+              <TableCell colSpan={10} className="text-center text-gray-500 py-8">
                 No commissions found
               </TableCell>
             </TableRow>
@@ -147,10 +159,10 @@ export const CommissionList: React.FC<CommissionListProps> = ({
                   }
                 }}
               >
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell className="w-12" onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedCommissions.includes(commission.id)}
-                    onCheckedChange={(checked) => handleSelectOne(commission.id, checked as boolean)}
+                    onCheckedChange={(checked: boolean | 'indeterminate') => handleSelectOne(commission.id, checked === true)}
                     aria-label={`Select commission for ${commission.name}`}
                   />
                 </TableCell>
@@ -200,6 +212,18 @@ export const CommissionList: React.FC<CommissionListProps> = ({
                   <StatusBadge status={commission.status} />
                 </TableCell>
                 <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  {commission.dealId && onViewCommissionDetails && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label="View commission details"
+                      onClick={() => onViewCommissionDetails(commission.dealId!)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  )}
+                </TableCell>
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
@@ -213,37 +237,42 @@ export const CommissionList: React.FC<CommissionListProps> = ({
                           View Deal
                         </DropdownMenuItem>
                       )}
-                      
-                      {userRole === 'admin' && (
+
+                      {(onChangeStatus || onApprove || onReject || onMarkPaid) && (
                         <>
-                          {commission.status === 'pending' && onApprove && (
-                            <DropdownMenuItem 
-                              onClick={() => onApprove(commission.id)}
-                              className="text-green-600"
+                          <DropdownMenuSeparator />
+                          {onChangeStatus && statusOptions.map((opt) => (
+                            <DropdownMenuItem
+                              key={opt.value}
+                              onClick={() => onChangeStatus(commission.id, opt.value)}
+                              disabled={commission.status === opt.value}
+                              className={opt.value === 'paid' ? 'text-blue-600' : opt.value === 'cancelled' ? 'text-red-600' : opt.value === 'approved' ? 'text-green-600' : ''}
                             >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Approve
+                              {opt.icon}
+                              {opt.label}
                             </DropdownMenuItem>
-                          )}
-                          
-                          {commission.status === 'pending' && onReject && (
-                            <DropdownMenuItem 
-                              onClick={() => onReject(commission.id)}
-                              className="text-red-600"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Reject
-                            </DropdownMenuItem>
-                          )}
-                          
-                          {commission.status === 'approved' && onMarkPaid && (
-                            <DropdownMenuItem 
-                              onClick={() => onMarkPaid(commission.id)}
-                              className="text-blue-600"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Mark as Paid
-                            </DropdownMenuItem>
+                          ))}
+                          {!onChangeStatus && (
+                            <>
+                              {commission.status === 'pending' && onApprove && (
+                                <DropdownMenuItem onClick={() => onApprove(commission.id)} className="text-green-600">
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Approve
+                                </DropdownMenuItem>
+                              )}
+                              {commission.status === 'pending' && onReject && (
+                                <DropdownMenuItem onClick={() => onReject(commission.id)} className="text-red-600">
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Reject
+                                </DropdownMenuItem>
+                              )}
+                              {commission.status === 'approved' && onMarkPaid && (
+                                <DropdownMenuItem onClick={() => onMarkPaid(commission.id)} className="text-blue-600">
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Mark as Paid
+                                </DropdownMenuItem>
+                              )}
+                            </>
                           )}
                         </>
                       )}

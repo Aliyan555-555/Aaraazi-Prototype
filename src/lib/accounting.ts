@@ -14,8 +14,9 @@ import {
   Expense
 } from '../types';
 import { Property } from '../types/properties';
-import { getJournalEntries, getAccountPayments } from './data';
+import { getJournalEntries, getAccountPayments, getPropertyById } from './data';
 import { getProperties, getExpenses } from './data';
+import { getDeals } from './deals';
 
 // ============================================
 // CHART OF ACCOUNTS MAPPING
@@ -68,6 +69,76 @@ export function getAccountInfo(accountName: string) {
     type: 'expense' as AccountType,
     normalBalance: 'debit' as NormalBalance
   };
+}
+
+/** General Ledger storage key (same as GeneralLedgerWorkspace) */
+const GENERAL_LEDGER_KEY = 'general_ledger_entries';
+
+/** Map General Ledger account names to Balance Sheet account names */
+const LEDGER_TO_BS_ACCOUNT: Record<string, string> = {
+  'Cash': 'Cash & Bank',
+  'Bank Account': 'Cash & Bank',
+  'Accounts Receivable': 'Accounts Receivable',
+  'Commission Receivable': 'Accounts Receivable',
+  'Property Inventory': 'Property Inventory',
+  'Accounts Payable': 'Accounts Payable',
+  'Commission Payable': 'Accrued Expenses',
+  'Expenses Payable': 'Accrued Expenses',
+  'Investor Distributions Payable': 'Customer Deposits',
+  'Owner Equity': "Owner's Capital",
+  'Retained Earnings': 'Retained Earnings',
+  'Commission Revenue': 'Current Year Earnings',
+  'Property Sales Revenue': 'Current Year Earnings',
+  'Rental Revenue': 'Current Year Earnings',
+  'Operating Expenses': 'Current Year Earnings',
+  'Marketing Expenses': 'Current Year Earnings',
+  'Salaries & Wages': 'Current Year Earnings',
+  'Utilities': 'Current Year Earnings',
+  'Office Rent': 'Current Year Earnings',
+};
+
+/** Asset/equity normal debit; liability/revenue normal credit. Expenses reduce equity (debit). */
+const LEDGER_ACCOUNT_NORMAL: Record<string, 'debit' | 'credit'> = {
+  'Cash': 'debit', 'Bank Account': 'debit', 'Accounts Receivable': 'debit', 'Commission Receivable': 'debit',
+  'Property Inventory': 'debit',
+  'Accounts Payable': 'credit', 'Commission Payable': 'credit', 'Expenses Payable': 'credit', 'Investor Distributions Payable': 'credit',
+  'Owner Equity': 'credit', 'Retained Earnings': 'credit',
+  'Commission Revenue': 'credit', 'Property Sales Revenue': 'credit', 'Rental Revenue': 'credit',
+  'Operating Expenses': 'debit', 'Marketing Expenses': 'debit', 'Salaries & Wages': 'debit', 'Utilities': 'debit', 'Office Rent': 'debit',
+};
+
+/**
+ * Get balances from General Ledger (general_ledger_entries) as of date.
+ * Maps LedgerEntry account names to Balance Sheet accounts and aggregates.
+ */
+function getLedgerBalancesAsOf(asOfDate: string): Record<string, number> {
+  const result: Record<string, number> = {};
+  try {
+    const raw = localStorage.getItem(GENERAL_LEDGER_KEY);
+    const entries: Array<{ date: string; accountName: string; debit: number; credit: number }> = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(entries)) return result;
+
+    const asOf = new Date(asOfDate);
+    const byBsAccount = new Map<string, number>();
+
+    entries
+      .filter(e => new Date(e.date) <= asOf)
+      .forEach(e => {
+        const bs = LEDGER_TO_BS_ACCOUNT[e.accountName];
+        if (!bs) return;
+        const d = e.debit || 0;
+        const c = e.credit || 0;
+        const balance = bs === 'Current Year Earnings'
+          ? c - d
+          : (LEDGER_ACCOUNT_NORMAL[e.accountName] ?? 'debit') === 'debit'
+            ? d - c
+            : c - d;
+        byBsAccount.set(bs, (byBsAccount.get(bs) ?? 0) + balance);
+      });
+
+    byBsAccount.forEach((v, k) => { result[k] = v; });
+  } catch (_) { /* ignore */ }
+  return result;
 }
 
 // ============================================
@@ -406,7 +477,8 @@ export function getNetIncomeForPeriod(
 }
 
 /**
- * Get account balance for a specific account
+ * Get account balance for a specific account.
+ * Uses both journal_entries (double-entry) and general_ledger_entries (General Ledger manual entries).
  */
 export function getAccountBalance(
   accountName: string,
@@ -433,9 +505,13 @@ export function getAccountBalance(
   });
 
   const accountInfo = getAccountInfo(accountName);
-  const balance = accountInfo.normalBalance === 'debit'
+  let balance = accountInfo.normalBalance === 'debit'
     ? (debit - credit)
     : (credit - debit);
+
+  const ledgerBalances = getLedgerBalancesAsOf(asOfDate);
+  const ledgerBalance = ledgerBalances[accountName] ?? 0;
+  balance += ledgerBalance;
 
   return { debit, credit, balance };
 }
@@ -871,61 +947,130 @@ export function generateCommissionReport(
   userId: string,
   userRole: string
 ): CommissionReport {
-  const properties = getProperties(userId, userRole);
+  const deals = getDeals(userId, userRole);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-  // Get sold/rented properties in the period
-  const commissionProperties = properties.filter(p =>
-    (p.status === 'sold' || p.status === 'rented') &&
-    p.soldDate &&
-    new Date(p.soldDate) >= new Date(startDate) &&
-    new Date(p.soldDate) <= new Date(endDate)
-  );
-
-  const commissions = commissionProperties.map(p => ({
-    propertyId: p.id,
-    propertyTitle: p.title,
-    dealType: (p.type === 'sale' ? 'sale' : 'rental') as 'sale' | 'rental',
-    dealValue: p.price || 0,
-    commissionRate: p.commissionRate || (p.type === 'sale' ? 2 : 8.33), // Default rates
-    commissionAmount: p.commissionEarned || 0,
-    agentId: p.agentId || '',
-    agentName: p.agentName || 'Unknown Agent',
-    closedDate: p.soldDate || '',
-  }));
-
-  // Calculate summary
-  const totalDeals = commissions.length;
-  const totalDealValue = commissions.reduce((sum, c) => sum + c.dealValue, 0);
-  const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0);
-  const averageCommissionRate = totalDeals > 0
-    ? commissions.reduce((sum, c) => sum + c.commissionRate, 0) / totalDeals
-    : 0;
-  const salesCommission = commissions
-    .filter(c => c.dealType === 'sale')
-    .reduce((sum, c) => sum + c.commissionAmount, 0);
-  const rentalCommission = commissions
-    .filter(c => c.dealType === 'rental')
-    .reduce((sum, c) => sum + c.commissionAmount, 0);
-
-  // Group by agent
-  const agentMap = new Map<string, { agentId: string; agentName: string; dealsCount: number; totalCommission: number }>();
-
-  commissions.forEach(c => {
-    if (!agentMap.has(c.agentId)) {
-      agentMap.set(c.agentId, {
-        agentId: c.agentId,
-        agentName: c.agentName,
-        dealsCount: 0,
-        totalCommission: 0,
-      });
-    }
-    const agent = agentMap.get(c.agentId)!;
-    agent.dealsCount++;
-    agent.totalCommission += c.commissionAmount;
+  // Use completedAt (set on deal completion) or timeline.actualClosingDate
+  const completedInRange = deals.filter(d => {
+    if (d.lifecycle.status !== 'completed') return false;
+    const closed = (d.metadata as { completedAt?: string })?.completedAt ?? d.lifecycle.timeline?.actualClosingDate ?? d.lifecycle.timeline?.expectedClosingDate ?? d.lifecycle.timeline?.offerAcceptedDate;
+    if (!closed) return false;
+    const dte = new Date(closed);
+    return dte >= start && dte <= end;
   });
 
-  const byAgent = Array.from(agentMap.values())
-    .sort((a, b) => b.totalCommission - a.totalCommission);
+  const commissions: CommissionReport['commissions'] = [];
+  const dealIdsReported = new Set<string>();
+  const agentToDealIds = new Map<string, Set<string>>();
+
+  for (const deal of completedInRange) {
+    const propertyId = deal.cycles?.sellCycle?.propertyId ?? (deal.cycles?.purchaseCycle as { propertyId?: string } | undefined)?.propertyId ?? '';
+    const prop = propertyId ? getPropertyById(propertyId) : null;
+    const propertyTitle = prop?.title ?? (propertyId ? `Property ${propertyId}` : `Deal ${deal.dealNumber}`);
+    const dealValue = deal.financial.agreedPrice;
+    const rate = deal.financial.commission?.rate ?? 0;
+    const closedAt = (deal.metadata as { completedAt?: string })?.completedAt ?? deal.lifecycle.timeline?.actualClosingDate ?? deal.lifecycle.timeline?.expectedClosingDate ?? deal.lifecycle.timeline?.offerAcceptedDate ?? '';
+
+    let addedForDeal = false;
+    const prim = deal.financial.commission?.split?.primaryAgent;
+    const sec = deal.financial.commission?.split?.secondaryAgent;
+
+    if (prim && deal.agents?.primary && (prim.amount ?? 0) > 0) {
+      dealIdsReported.add(deal.id);
+      addedForDeal = true;
+      if (!agentToDealIds.has(deal.agents.primary.id)) agentToDealIds.set(deal.agents.primary.id, new Set());
+      agentToDealIds.get(deal.agents.primary.id)!.add(deal.id);
+      commissions.push({
+        propertyId,
+        propertyTitle,
+        dealType: 'sale',
+        dealValue,
+        commissionRate: rate,
+        commissionAmount: prim.amount,
+        agentId: deal.agents.primary.id,
+        agentName: deal.agents.primary.name || 'Unknown Agent',
+        closedDate: closedAt,
+      });
+    }
+
+    if (sec && deal.agents?.secondary && (sec.amount ?? 0) > 0) {
+      if (!dealIdsReported.has(deal.id)) dealIdsReported.add(deal.id);
+      addedForDeal = true;
+      if (!agentToDealIds.has(deal.agents.secondary.id)) agentToDealIds.set(deal.agents.secondary.id, new Set());
+      agentToDealIds.get(deal.agents.secondary.id)!.add(deal.id);
+      commissions.push({
+        propertyId,
+        propertyTitle,
+        dealType: 'sale',
+        dealValue,
+        commissionRate: rate,
+        commissionAmount: sec.amount,
+        agentId: deal.agents.secondary.id,
+        agentName: deal.agents.secondary.name || 'Unknown Agent',
+        closedDate: closedAt,
+      });
+    }
+
+    if (!addedForDeal) {
+      const agentsArr = (deal.financial.commission as { agents?: Array<{ id: string; name?: string; amount?: number }> })?.agents;
+      if (agentsArr && agentsArr.length > 0) {
+        dealIdsReported.add(deal.id);
+        for (const a of agentsArr) {
+          const amt = a.amount ?? 0;
+          if (amt <= 0) continue;
+          if (!agentToDealIds.has(a.id)) agentToDealIds.set(a.id, new Set());
+          agentToDealIds.get(a.id)!.add(deal.id);
+          commissions.push({
+            propertyId,
+            propertyTitle,
+            dealType: 'sale',
+            dealValue,
+            commissionRate: rate,
+            commissionAmount: amt,
+            agentId: a.id,
+            agentName: a.name ?? 'Unknown Agent',
+            closedDate: closedAt,
+          });
+        }
+      } else {
+        const total = deal.financial.commission?.total ?? 0;
+        if (total > 0 && deal.agents?.primary) {
+          dealIdsReported.add(deal.id);
+          if (!agentToDealIds.has(deal.agents.primary.id)) agentToDealIds.set(deal.agents.primary.id, new Set());
+          agentToDealIds.get(deal.agents.primary.id)!.add(deal.id);
+          commissions.push({
+            propertyId,
+            propertyTitle,
+            dealType: 'sale',
+            dealValue,
+            commissionRate: rate,
+            commissionAmount: total,
+            agentId: deal.agents.primary.id,
+            agentName: deal.agents.primary.name || 'Unknown Agent',
+            closedDate: closedAt,
+          });
+        }
+      }
+    }
+  }
+
+  const totalDeals = dealIdsReported.size;
+  const totalDealValue = Array.from(dealIdsReported).reduce((sum, id) => {
+    const d = completedInRange.find(x => x.id === id);
+    return sum + (d?.financial.agreedPrice ?? 0);
+  }, 0);
+  const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+  const averageCommissionRate = totalDeals > 0 && totalDealValue > 0 ? (totalCommission / totalDealValue) * 100 : 0;
+  const salesCommission = totalCommission; // all deal-based commission is sales
+  const rentalCommission = 0;
+
+  const byAgent = Array.from(agentToDealIds.entries()).map(([agentId, dealIds]) => {
+    const rows = commissions.filter(c => c.agentId === agentId);
+    const agentName = rows[0]?.agentName ?? 'Unknown Agent';
+    const totalCommission = rows.reduce((s, c) => s + c.commissionAmount, 0);
+    return { agentId, agentName, dealsCount: dealIds.size, totalCommission };
+  }).sort((a, b) => b.totalCommission - a.totalCommission);
 
   return {
     id: `CR-${Date.now()}`,

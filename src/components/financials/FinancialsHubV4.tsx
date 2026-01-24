@@ -14,7 +14,7 @@ import { formatPKR, formatCurrencyShort } from '../../lib/currency';
 import { getDeals } from '../../lib/deals';
 import { getExpenses, getProperties, getJournalEntries } from '../../lib/data';
 import { getAllAgencyTransactions } from '../../lib/agencyTransactions';
-import { getPropertyInvestments } from '../../lib/investors';
+import { getAllInvestorInvestments } from '../../lib/investors';
 import {
   DollarSign,
   Receipt,
@@ -34,6 +34,8 @@ interface FinancialsHubV4Props {
   onNavigate?: (module: string) => void;
   onViewDeal?: (dealId: string) => void;
   onViewProperty?: (propertyId: string) => void;
+  /** Open a specific module by default (e.g. 'reports' when navigating from Financial Reports) */
+  defaultModule?: string | null;
 }
 
 /**
@@ -77,8 +79,13 @@ interface FinancialsHubV4Props {
  *   onNavigate={(module) => console.log('Navigate to:', module)}
  * />
  */
-export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNavigate, onViewDeal, onViewProperty }) => {
-  const [activeModule, setActiveModule] = useState<string | null>(null);
+export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNavigate, onViewDeal, onViewProperty, defaultModule }) => {
+  const [activeModule, setActiveModule] = useState<string | null>(defaultModule ?? null);
+
+  // Sync activeModule when defaultModule changes (e.g. switching to Financial Reports tab)
+  React.useEffect(() => {
+    if (defaultModule != null) setActiveModule(defaultModule);
+  }, [defaultModule]);
 
   // Calculate real-time stats from actual data
   const stats = useMemo(() => {
@@ -156,7 +163,7 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
       { 
         label: 'Net Cash Flow', 
         value: formatCurrencyShort(netCashFlow), 
-        variant: netCashFlow >= 0 ? 'success' as const : 'danger' as const 
+        variant: netCashFlow >= 0 ? 'success' as const : 'destructive' as const 
       },
       { 
         label: 'Pending Commissions', 
@@ -203,7 +210,7 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
       })
       .reduce((sum, e) => sum + e.amount, 0);
 
-    const pendingExpenses = expenses.filter(e => e.status === 'Pending').length;
+    const pendingExpenses = expenses.filter(e => e.status === 'pending').length;
 
     // Property financials stats - calculate from agency transactions
     const agencyTransactions = getAllAgencyTransactions();
@@ -226,8 +233,8 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
       ? propertyROIs.reduce((sum, roi) => sum + roi, 0) / propertyROIs.length 
       : 0;
 
-    // Investor stats - calculate from property investments
-    const allInvestments = getPropertyInvestments();
+    // Investor stats - calculate from all investor investments
+    const allInvestments = getAllInvestorInvestments();
     const uniqueInvestors = new Set(allInvestments.map(inv => inv.investorId));
     const totalInvestors = uniqueInvestors.size;
     
@@ -246,20 +253,56 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
     const completedDeals = deals.filter(d => d.lifecycle.status === 'completed');
     const totalPaid = completedDeals.reduce((sum, d) => sum + d.financial.totalPaid, 0);
     const paidExpenses = expenses
-      .filter(e => e.status === 'Paid')
+      .filter(e => e.status === 'paid')
       .reduce((sum, e) => sum + e.amount, 0);
     const cashPosition = Math.max(0, totalPaid - paidExpenses);
     
     // Count unique bank accounts (from transactions or deals)
     const bankAccounts = 1; // Default to 1, can be enhanced with bank account tracking
 
-    // Reports stats - placeholder (would need report storage)
-    const generatedReports = 0; // Would need to track generated reports
-    const thisMonthReports = 0;
+    // Reports stats - load from localStorage (same key as FinancialReportsWorkspace)
+    const REPORTS_STORAGE_KEY = 'generated_reports';
+    let generatedReports = 0;
+    let thisMonthReports = 0;
+    try {
+      const stored = localStorage.getItem(REPORTS_STORAGE_KEY);
+      if (stored) {
+        const reports = JSON.parse(stored);
+        generatedReports = Array.isArray(reports) ? reports.length : 0;
+        const now = new Date();
+        thisMonthReports = Array.isArray(reports)
+          ? reports.filter((r: { generatedAt?: string }) => {
+              if (!r.generatedAt) return false;
+              const d = new Date(r.generatedAt);
+              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length
+          : 0;
+      }
+    } catch (_) { /* ignore */ }
 
-    // Budgeting stats - placeholder (would need budget tracking)
-    const totalBudget = 0; // Would need budget system
-    const budgetVariance = 0;
+    // Budgeting stats - load from budget_categories, match expenses like BudgetingWorkspace
+    const BUDGET_STORAGE_KEY = 'budget_categories';
+    let totalBudget = 0;
+    let budgetVariance = 0;
+    try {
+      const stored = localStorage.getItem(BUDGET_STORAGE_KEY);
+      if (stored) {
+        const budgets = JSON.parse(stored);
+        if (Array.isArray(budgets)) {
+          totalBudget = budgets.reduce((sum: number, b: { budgetAmount?: number }) => sum + (b.budgetAmount || 0), 0);
+          let totalActual = 0;
+          budgets.forEach((b: { name?: string; budgetAmount?: number; actualSpend?: number }) => {
+            const categoryExpenses = expenses.filter((e: { category?: string }) =>
+              (e.category || '').toLowerCase().includes((b.name || '').toLowerCase()) ||
+              (b.name || '').toLowerCase().includes((e.category || '').toLowerCase())
+            );
+            const actual = categoryExpenses.reduce((s: number, e: { amount?: number }) => s + (e.amount || 0), 0);
+            totalActual += actual;
+          });
+          budgetVariance = totalBudget > 0 ? ((totalBudget - totalActual) / totalBudget) * 100 : 0;
+        }
+      }
+    } catch (_) { /* ignore */ }
 
     return {
       commissions: [
@@ -418,7 +461,6 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
       <GeneralLedgerWorkspace
         user={user}
         onBack={handleBackToDashboard}
-        onViewProperty={onViewProperty}
       />
     );
   }
@@ -428,7 +470,6 @@ export const FinancialsHubV4: React.FC<FinancialsHubV4Props> = ({ user, onNaviga
       <BankReconciliationWorkspace
         user={user}
         onBack={handleBackToDashboard}
-        onViewProperty={onViewProperty}
       />
     );
   }

@@ -6,7 +6,7 @@ import { linkAllContactsToDeal, linkDealToTransaction } from './dataFlowConnecti
 import { updatePurchaseCycle, getPurchaseCycleById, savePurchaseCycle } from './purchaseCycle';
 import { getSellCycleById, updateSellCycle, saveSellCycle } from './sellCycle';
 import { transferOwnership } from './ownership';
-import { getProperties, updateProperty } from './data';
+import { updateProperty, getPropertyById } from './data';
 import { saveTransaction } from './transactions';
 import { syncDealToAllCycles as syncDealToAllCyclesFromSync } from './dealSync';
 import { syncPropertyStatusFromSellCycle } from './propertyStatusSync';
@@ -1107,16 +1107,15 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
 
   // CRITICAL: Handle ownership transfer and cycle completion
   try {
-    // Get the property
-    const properties = getProperties();
-
     // Handle based on whether this is a sell-side or purchase-side deal
     if (deal.cycles.sellCycle) {
       // Dual-cycle or single-cycle sell deal
       const sellCycle = getSellCycleById(deal.cycles.sellCycle.id);
 
       if (sellCycle) {
-        const property = properties.find((p: any) => p.id === sellCycle.propertyId);
+        // Use getPropertyById - never use getProperties().find(); that filters by user/validity
+        // and can exclude the property, skipping ownership transfer entirely.
+        const property = getPropertyById(sellCycle.propertyId);
 
         if (property) {
           // Create transaction record
@@ -1142,14 +1141,54 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
 
           saveTransaction(transaction);
 
+          // Determine buyer type from purchase cycle if available, otherwise default to 'client'
+          let buyerType: 'client' | 'agency' | 'investor' | 'external' = 'client';
+          let investorShares = undefined;
+          
+          if (deal.cycles.purchaseCycle) {
+            const purchaseCycle = getPurchaseCycleById(deal.cycles.purchaseCycle.id);
+            if (purchaseCycle) {
+              // Map purchaserType to ownerType
+              if (purchaseCycle.purchaserType === 'agency') {
+                buyerType = 'agency';
+              } else if (purchaseCycle.purchaserType === 'investor') {
+                buyerType = 'investor';
+                investorShares = purchaseCycle.investors;
+              } else {
+                buyerType = 'client';
+              }
+            }
+          }
+
           // Transfer ownership to buyer
-          transferOwnership(
+          console.log('🔄 Attempting ownership transfer for sell cycle...');
+          console.log('   - Property ID:', sellCycle.propertyId);
+          console.log('   - New Owner ID:', deal.parties.buyer.id);
+          console.log('   - New Owner Name:', deal.parties.buyer.name);
+          console.log('   - New Owner Type:', buyerType);
+          console.log('   - Transaction ID:', transactionId);
+
+          const ownershipResult = transferOwnership(
             sellCycle.propertyId,
             deal.parties.buyer.id,
             deal.parties.buyer.name,
+            buyerType,
             transactionId,
+            investorShares,
+            deal.financial.agreedPrice,
             `Sold via deal ${deal.dealNumber}. Seller: ${deal.parties.seller.name}. Buyer: ${deal.parties.buyer.name}. Price: ${deal.financial.agreedPrice}`
           );
+
+          if (!ownershipResult) {
+            console.error('❌ Ownership transfer FAILED - transferOwnership returned null');
+            console.error('   - This usually means the property was not found or there was an error');
+            throw new Error('Failed to transfer ownership - property not found or transfer failed');
+          } else {
+            console.log('✅ Ownership transferred successfully');
+            console.log('   - New current owner:', ownershipResult.currentOwnerId);
+            console.log('   - New owner name:', ownershipResult.currentOwnerName);
+            console.log('   - New owner type:', ownershipResult.currentOwnerType);
+          }
 
           // Update sell cycle status
           updateSellCycle(deal.cycles.sellCycle.id, {
@@ -1168,11 +1207,15 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
             }
           }
 
-          // CRITICAL FIX: Update property status to 'sold'
-          updateProperty(sellCycle.propertyId, {
-            status: 'sold',
-            updatedAt: now,
-          });
+          // CRITICAL FIX: Update property status to 'sold' (ownership already updated by transferOwnership)
+          // Only update status, not owner fields (they're already updated by transferOwnership)
+          const currentProperty = getPropertyById(sellCycle.propertyId);
+          if (currentProperty) {
+            updateProperty(sellCycle.propertyId, {
+              status: 'sold',
+              updatedAt: now,
+            });
+          }
 
           console.log('✅ Ownership transferred and cycles completed');
           console.log(`   - Property: ${sellCycle.propertyId}`);
@@ -1196,7 +1239,8 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
         console.log('✅ Purchase cycle found:', purchaseCycle.id);
         console.log('   - Property ID:', purchaseCycle.propertyId);
 
-        const property = properties.find((p: any) => p.id === purchaseCycle.propertyId);
+        // Use getPropertyById - never use getProperties().find(); that can exclude the property.
+        const property = getPropertyById(purchaseCycle.propertyId);
 
         if (property) {
           console.log('✅ Property found:', property.title);
@@ -1233,18 +1277,36 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
             // Don't throw - transaction is still saved
           }
 
+          // Determine buyer type from purchase cycle
+          let buyerType: 'client' | 'agency' | 'investor' | 'external' = 'client';
+          let investorShares = undefined;
+          
+          // Map purchaserType to ownerType
+          if (purchaseCycle.purchaserType === 'agency') {
+            buyerType = 'agency';
+          } else if (purchaseCycle.purchaserType === 'investor') {
+            buyerType = 'investor';
+            investorShares = purchaseCycle.investors;
+          } else {
+            buyerType = 'client';
+          }
+
           // Transfer ownership to buyer
           console.log('🔄 Attempting ownership transfer...');
           console.log('   - Property ID:', purchaseCycle.propertyId);
           console.log('   - New Owner ID:', deal.parties.buyer.id);
           console.log('   - New Owner Name:', deal.parties.buyer.name);
+          console.log('   - New Owner Type:', buyerType);
           console.log('   - Transaction ID:', transactionId);
 
           const ownershipResult = transferOwnership(
             purchaseCycle.propertyId,
             deal.parties.buyer.id,
             deal.parties.buyer.name,
+            buyerType,
             transactionId,
+            investorShares,
+            deal.financial.agreedPrice,
             `Purchased via deal ${deal.dealNumber}. Seller: ${deal.parties.seller.name}. Buyer: ${deal.parties.buyer.name}. Price: ${deal.financial.agreedPrice}`
           );
 
@@ -1263,10 +1325,14 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
           });
 
           // CRITICAL FIX: Update property status to 'sold' (for purchase-side deals too)
-          updateProperty(purchaseCycle.propertyId, {
-            currentStatus: 'sold',
-            updatedAt: now,
-          });
+          // Ownership already updated by transferOwnership, just update status
+          const currentProperty = getPropertyById(purchaseCycle.propertyId);
+          if (currentProperty) {
+            updateProperty(purchaseCycle.propertyId, {
+              status: 'sold',
+              updatedAt: now,
+            });
+          }
 
           console.log('✅ Ownership transferred and purchase cycle completed');
           console.log(`   - Property: ${purchaseCycle.propertyId}`);

@@ -169,11 +169,23 @@ export function addTenantApplication(
   tenantId: string,
   tenantName: string,
   tenantContact: string,
-  notes?: string
+  notes?: string,
+  fromRequirementId?: string
 ): void {
   const cycle = getRentCycleById(cycleId);
   if (!cycle) {
     throw new Error('Rent cycle not found');
+  }
+
+  // Check for duplicate application from the same requirement
+  if (fromRequirementId) {
+    const existingApplication = (cycle.applications || []).find(
+      (app: any) => app.fromRequirementId === fromRequirementId && app.tenantId === tenantId
+    );
+    
+    if (existingApplication) {
+      throw new Error('Application already submitted for this requirement');
+    }
   }
 
   const application = {
@@ -184,13 +196,21 @@ export function addTenantApplication(
     appliedDate: new Date().toISOString().split('T')[0],
     status: 'pending' as const,
     notes,
+    fromRequirementId, // Track which requirement this came from
   };
 
-  const updatedApplications = [...cycle.applications, application];
+  const updatedApplications = [...(cycle.applications || []), application];
   updateRentCycle(cycleId, {
     applications: updatedApplications,
     status: 'application-received',
   });
+  
+  // Dispatch event so UI can update
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('applicationCreated', {
+      detail: { rentCycleId: cycleId, applicationId: application.id }
+    }));
+  }
 }
 
 /**
@@ -229,47 +249,102 @@ export function rejectTenantApplication(cycleId: string, applicationId: string):
 
 /**
  * Sign a lease with a tenant
+ * Can be called with either applicationId or tenant details directly
  */
 export function signLease(
   cycleId: string,
-  tenantId: string,
-  tenantName: string,
-  tenantContact: string,
-  startDate?: string
-): void {
-  const cycle = getRentCycleById(cycleId);
-  if (!cycle) {
-    throw new Error('Rent cycle not found');
-  }
+  applicationIdOrTenantId: string,
+  startDateOrTenantName: string,
+  endDateOrTenantContact?: string,
+  tenantContact?: string
+): { success: boolean; error?: string } {
+  try {
+    const cycle = getRentCycleById(cycleId);
+    if (!cycle) {
+      return { success: false, error: 'Rent cycle not found' };
+    }
 
-  const leaseStart = startDate || new Date().toISOString().split('T')[0];
-  const leaseEndDate = new Date(leaseStart);
-  leaseEndDate.setMonth(leaseEndDate.getMonth() + cycle.leasePeriod);
+    let tenantId: string;
+    let tenantName: string;
+    let tenantContactInfo: string;
+    let leaseStart: string;
+    let leaseEnd: string;
 
-  updateRentCycle(cycleId, {
-    status: 'active',
-    currentTenantId: tenantId,
-    currentTenantName: tenantName,
-    currentTenantContact: tenantContact,
-    leaseStartDate: leaseStart,
-    leaseEndDate: leaseEndDate.toISOString().split('T')[0],
-  });
+    // Check if first parameter is an applicationId (by checking if it starts with 'app_')
+    // or if we have 5 parameters (old signature)
+    if (applicationIdOrTenantId.startsWith('app_') || applicationIdOrTenantId.startsWith('tenant_')) {
+      // New signature: signLease(cycleId, applicationId, startDate, endDate)
+      const applicationId = applicationIdOrTenantId;
+      const application = (cycle.applications || []).find((app: any) => app.id === applicationId);
+      
+      if (!application) {
+        return { success: false, error: 'Application not found' };
+      }
 
-  // Initialize rent payments for the lease period
-  const payments = [];
-  const currentDate = new Date(leaseStart);
+      tenantId = application.tenantId;
+      tenantName = application.tenantName;
+      tenantContactInfo = application.tenantContact || '';
+      leaseStart = startDateOrTenantName; // startDate
+      leaseEnd = endDateOrTenantContact || ''; // endDate
+    } else {
+      // Old signature: signLease(cycleId, tenantId, tenantName, tenantContact, startDate?)
+      tenantId = applicationIdOrTenantId;
+      tenantName = startDateOrTenantName;
+      tenantContactInfo = endDateOrTenantContact || '';
+      leaseStart = tenantContact || new Date().toISOString().split('T')[0];
+      
+      // Calculate end date from lease period if not provided
+      const leaseEndDate = new Date(leaseStart);
+      leaseEndDate.setMonth(leaseEndDate.getMonth() + (cycle.leasePeriod || 12));
+      leaseEnd = leaseEndDate.toISOString().split('T')[0];
+    }
 
-  for (let i = 0; i < cycle.leasePeriod; i++) {
-    const month = currentDate.toISOString().slice(0, 7); // "YYYY-MM"
-    payments.push({
-      month,
-      amount: cycle.monthlyRent,
-      status: 'pending' as const,
+    if (!leaseStart) {
+      return { success: false, error: 'Lease start date is required' };
+    }
+
+    if (!leaseEnd) {
+      // Calculate end date from lease period
+      const leaseEndDate = new Date(leaseStart);
+      leaseEndDate.setMonth(leaseEndDate.getMonth() + (cycle.leasePeriod || 12));
+      leaseEnd = leaseEndDate.toISOString().split('T')[0];
+    }
+
+    updateRentCycle(cycleId, {
+      status: 'active',
+      currentTenantId: tenantId,
+      currentTenantName: tenantName,
+      currentTenantContact: tenantContactInfo,
+      leaseStartDate: leaseStart,
+      leaseEndDate: leaseEnd,
     });
-    currentDate.setMonth(currentDate.getMonth() + 1);
-  }
 
-  updateRentCycle(cycleId, { rentPayments: payments });
+    // Initialize rent payments for the lease period
+    const payments = [];
+    const currentDate = new Date(leaseStart);
+    const leasePeriodMonths = Math.ceil(
+      (new Date(leaseEnd).getTime() - new Date(leaseStart).getTime()) / (1000 * 60 * 60 * 24 * 30)
+    );
+
+    for (let i = 0; i < leasePeriodMonths; i++) {
+      const month = currentDate.toISOString().slice(0, 7); // "YYYY-MM"
+      payments.push({
+        month,
+        amount: cycle.monthlyRent,
+        status: 'pending' as const,
+      });
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    updateRentCycle(cycleId, { rentPayments: payments });
+
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to sign lease' 
+    };
+  }
 }
 
 /**
@@ -605,6 +680,17 @@ export function submitCrossAgentRentOffer(
     agentNotes: applicationData.agentNotes,
     coordinationRequired: applicationData.coordinationRequired,
   };
+
+  // Check for duplicate application from the same requirement
+  if (applicationData.fromRequirementId) {
+    const existingApplication = (cycle.applications || []).find(
+      (app: any) => app.fromRequirementId === applicationData.fromRequirementId
+    );
+    
+    if (existingApplication) {
+      throw new Error('Application already submitted for this requirement');
+    }
+  }
 
   // Add application to cycle
   const updatedApplications = [...(cycle.applications || []), newApplication];

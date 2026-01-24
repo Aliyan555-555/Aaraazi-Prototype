@@ -11,6 +11,7 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { CRMInteraction, User } from '../../types';
 import { addInteraction, updateInteraction, getProperties } from '../../lib/data';
+import { formatPropertyAddress } from '../../lib/utils';
 import { Phone, Mail, MessageSquare, Video, Eye, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -164,17 +165,17 @@ export const InteractionForm: React.FC<InteractionFormProps> = ({
       <div className="space-y-2">
         <Label htmlFor="propertyId">Related Property</Label>
         <Select
-          value={formData.propertyId}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, propertyId: value }))}
+          value={formData.propertyId || 'none'}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, propertyId: value === 'none' ? '' : value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select property (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {properties.map(property => (
               <SelectItem key={property.id} value={property.id}>
-                {property.title || property.address}
+                {property.title || formatPropertyAddress(property.address) || 'Untitled Property'}
               </SelectItem>
             ))}
           </SelectContent>

@@ -132,8 +132,8 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
         description,
         amount: amountNum,
         status,
-        propertyId: propertyId || undefined,
-        propertyTitle: propertyId ? properties.find(p => p.id === propertyId)?.title : undefined,
+        propertyId: propertyId && propertyId !== 'none' ? propertyId : undefined,
+        propertyTitle: propertyId && propertyId !== 'none' ? properties.find(p => p.id === propertyId)?.title : undefined,
         vendor: vendor || undefined,
         receiptNumber: receiptNumber || undefined,
         notes: notes || undefined,
@@ -238,12 +238,12 @@ export const ExpenseFormModal: React.FC<ExpenseFormModalProps> = ({
           {properties.length > 0 && (
             <div>
               <Label htmlFor="property">Property (Optional)</Label>
-              <Select value={propertyId} onValueChange={setPropertyId}>
+              <Select value={propertyId || 'none'} onValueChange={(val) => setPropertyId(val === 'none' ? '' : val)}>
                 <SelectTrigger id="property">
                   <SelectValue placeholder="Select property (if applicable)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {properties.map((property) => (
                     <SelectItem key={property.id} value={property.id}>
                       {property.title}

@@ -11,6 +11,7 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { CRMTask, User } from '../../types';
 import { addTask, updateTask, getProperties } from '../../lib/data';
+import { formatPropertyAddress } from '../../lib/utils';
 import { Phone, Calendar, Users, FileText, Home } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -206,17 +207,17 @@ export const TaskForm: React.FC<TaskFormProps> = ({
       <div className="space-y-2">
         <Label htmlFor="propertyId">Related Property</Label>
         <Select
-          value={formData.propertyId}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, propertyId: value }))}
+          value={formData.propertyId || 'none'}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, propertyId: value === 'none' ? '' : value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select property (optional)" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {properties.map(property => (
               <SelectItem key={property.id} value={property.id}>
-                {property.title || property.address}
+                {property.title || formatPropertyAddress(property.address) || 'Untitled Property'}
               </SelectItem>
             ))}
           </SelectContent>

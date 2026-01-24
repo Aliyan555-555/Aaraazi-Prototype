@@ -6,8 +6,10 @@ import { WorkspaceEmptyState, EmptyStatePresets } from '../../workspace/Workspac
 import { CommissionMetrics } from './CommissionMetrics';
 import { CommissionList, CommissionAgent } from './CommissionList';
 import { BulkCommissionActions } from './BulkCommissionActions';
+import { DealCommissionDetailModal } from './DealCommissionDetailModal';
 import { Button } from '../../ui/button';
-import { getDeals, updateDeal } from '../../../lib/deals';
+import { getDeals, getDealById, updateDeal } from '../../../lib/deals';
+import { getPropertyById } from '../../../lib/data';
 import { formatPKR } from '../../../lib/currency';
 import { toast } from 'sonner';
 import { ArrowLeft, Download, CheckCircle, XCircle, Wallet } from 'lucide-react';
@@ -69,6 +71,7 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
   const [selectedCommissions, setSelectedCommissions] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | 'pay' | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [commissionDetailDealId, setCommissionDetailDealId] = useState<string | null>(null);
 
   // Get all commissions from deals
   const allCommissions = useMemo(() => {
@@ -77,21 +80,22 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
 
     deals.forEach(deal => {
       if (deal.financial.commission.agents && deal.financial.commission.agents.length > 0) {
-        deal.financial.commission.agents.forEach(agent => {
-          // Get property title from sell cycle
+        deal.financial.commission.agents.forEach((agent: { agentId?: string; id?: string; name?: string; amount?: number; percentage?: number; status?: string; role?: string; approvedAt?: string; paidAt?: string }) => {
+          const agentKey = agent.agentId ?? agent.id ?? '';
           let propertyTitle = 'Unknown Property';
-          if (deal.cycles.sellCycle?.propertyId) {
-            // We'll need to fetch this from properties
-            propertyTitle = deal.cycles.sellCycle.propertyId; // Placeholder
+          const propId = deal.cycles?.sellCycle?.propertyId ?? (deal.cycles?.purchaseCycle as { propertyId?: string } | undefined)?.propertyId;
+          if (propId) {
+            const prop = getPropertyById(propId);
+            propertyTitle = prop?.title ?? propId;
           }
 
           commissions.push({
-            id: `${deal.id}-${agent.agentId}`, // Unique ID for each commission
-            agentId: agent.agentId,
-            name: agent.name,
-            amount: agent.amount,
-            percentage: agent.percentage,
-            status: agent.status,
+            id: `${deal.id}-${agentKey}`,
+            agentId: agentKey,
+            name: agent.name ?? 'Unknown',
+            amount: agent.amount ?? 0,
+            percentage: agent.percentage ?? 0,
+            status: (agent.status as 'pending' | 'approved' | 'paid' | 'cancelled') ?? 'pending',
             role: agent.role,
             dealId: deal.id,
             dealNumber: deal.dealNumber,
@@ -219,8 +223,9 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
         if (!deal) continue;
 
         // Update commission statuses
-        const updatedAgents = deal.financial.commission.agents.map(agent => {
-          const matchingCommission = commissions.find(c => c.agentId === agent.agentId);
+        const updatedAgents = deal.financial.commission.agents.map((agent: { agentId?: string; id?: string; [k: string]: any }) => {
+          const agentKey = agent.agentId ?? agent.id;
+          const matchingCommission = commissions.find(c => c.agentId === agentKey);
           if (!matchingCommission) return agent;
 
           const now = new Date().toISOString();
@@ -237,19 +242,12 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
           }
         });
 
-        // Update deal
-        const updatedDeal: Deal = {
-          ...deal,
+        updateDeal(dealId, {
           financial: {
             ...deal.financial,
-            commission: {
-              ...deal.financial.commission,
-              agents: updatedAgents,
-            },
+            commission: { ...deal.financial.commission, agents: updatedAgents },
           },
-        };
-
-        updateDeal(updatedDeal);
+        });
         successCount += commissions.length;
       }
 
@@ -273,27 +271,21 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
     if (!commission?.dealId) return;
 
     try {
-      const deal = getDeals(user.id, user.role).find(d => d.id === commission.dealId);
+      const deal = getDealById(commission.dealId);
       if (!deal) return;
 
-      const updatedAgents = deal.financial.commission.agents.map(agent =>
-        agent.agentId === commission.agentId
+      const updatedAgents = deal.financial.commission.agents.map((agent: { agentId?: string; id?: string; [k: string]: any }) =>
+        (agent.agentId ?? agent.id) === commission.agentId
           ? { ...agent, status: 'approved' as const, approvedAt: new Date().toISOString() }
           : agent
       );
 
-      const updatedDeal: Deal = {
-        ...deal,
+      updateDeal(deal.id, {
         financial: {
           ...deal.financial,
-          commission: {
-            ...deal.financial.commission,
-            agents: updatedAgents,
-          },
+          commission: { ...deal.financial.commission, agents: updatedAgents },
         },
-      };
-
-      updateDeal(updatedDeal);
+      });
       toast.success(`Commission approved for ${commission.name}`);
       setRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -307,27 +299,21 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
     if (!commission?.dealId) return;
 
     try {
-      const deal = getDeals(user.id, user.role).find(d => d.id === commission.dealId);
+      const deal = getDealById(commission.dealId);
       if (!deal) return;
 
-      const updatedAgents = deal.financial.commission.agents.map(agent =>
-        agent.agentId === commission.agentId
+      const updatedAgents = deal.financial.commission.agents.map((agent: { agentId?: string; id?: string; [k: string]: any }) =>
+        (agent.agentId ?? agent.id) === commission.agentId
           ? { ...agent, status: 'pending' as const }
           : agent
       );
 
-      const updatedDeal: Deal = {
-        ...deal,
+      updateDeal(deal.id, {
         financial: {
           ...deal.financial,
-          commission: {
-            ...deal.financial.commission,
-            agents: updatedAgents,
-          },
+          commission: { ...deal.financial.commission, agents: updatedAgents },
         },
-      };
-
-      updateDeal(updatedDeal);
+      });
       toast.success(`Commission rejected for ${commission.name}`);
       setRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -341,32 +327,66 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
     if (!commission?.dealId) return;
 
     try {
-      const deal = getDeals(user.id, user.role).find(d => d.id === commission.dealId);
+      const deal = getDealById(commission.dealId);
       if (!deal) return;
 
-      const updatedAgents = deal.financial.commission.agents.map(agent =>
-        agent.agentId === commission.agentId
+      const updatedAgents = deal.financial.commission.agents.map((agent: { agentId?: string; id?: string; [k: string]: any }) =>
+        (agent.agentId ?? agent.id) === commission.agentId
           ? { ...agent, status: 'paid' as const, paidAt: new Date().toISOString() }
           : agent
       );
 
-      const updatedDeal: Deal = {
-        ...deal,
+      updateDeal(deal.id, {
         financial: {
           ...deal.financial,
-          commission: {
-            ...deal.financial.commission,
-            agents: updatedAgents,
-          },
+          commission: { ...deal.financial.commission, agents: updatedAgents },
         },
-      };
-
-      updateDeal(updatedDeal);
+      });
       toast.success(`Commission marked as paid for ${commission.name}`);
       setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Mark paid failed:', error);
       toast.error('Failed to mark commission as paid');
+    }
+  };
+
+  const handleChangeStatus = async (
+    commissionId: string,
+    status: 'pending' | 'approved' | 'paid' | 'cancelled'
+  ) => {
+    const commission = allCommissions.find(c => c.id === commissionId);
+    if (!commission?.dealId) return;
+
+    try {
+      const deal = getDealById(commission.dealId);
+      if (!deal) return;
+
+      const now = new Date().toISOString();
+      const updatedAgents = deal.financial.commission.agents.map(agent =>
+        (agent.agentId ?? (agent as { id?: string }).id) === commission.agentId
+          ? {
+              ...agent,
+              status,
+              ...(status === 'approved' && { approvedAt: now }),
+              ...(status === 'paid' && { paidAt: now }),
+              ...((status === 'pending' || status === 'cancelled') && { approvedAt: undefined, paidAt: undefined }),
+            }
+          : agent
+      );
+
+      updateDeal(deal.id, {
+        financial: {
+          ...deal.financial,
+          commission: { ...deal.financial.commission, agents: updatedAgents },
+        },
+      });
+
+      const labels: Record<string, string> = { pending: 'Pending', approved: 'Approved', paid: 'Paid', cancelled: 'Cancelled' };
+      toast.success(`Commission set to ${labels[status]} for ${commission.name}`);
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Change status failed:', error);
+      toast.error('Failed to change commission status');
     }
   };
 
@@ -530,6 +550,8 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
             selectedCommissions={selectedCommissions}
             onSelectionChange={setSelectedCommissions}
             onViewDeal={onViewDeal}
+            onViewCommissionDetails={(dealId) => setCommissionDetailDealId(dealId)}
+            onChangeStatus={handleChangeStatus}
             onApprove={handleApprove}
             onReject={handleReject}
             onMarkPaid={handleMarkPaid}
@@ -545,6 +567,14 @@ export const CommissionWorkspace: React.FC<CommissionWorkspaceProps> = ({
         action={bulkAction}
         selectedCommissions={selectedCommissionObjects}
         onConfirm={handleBulkAction}
+      />
+
+      {/* Deal Commission Detail Modal */}
+      <DealCommissionDetailModal
+        open={!!commissionDetailDealId}
+        onClose={() => setCommissionDetailDealId(null)}
+        dealId={commissionDetailDealId}
+        onViewDeal={onViewDeal}
       />
     </div>
   );

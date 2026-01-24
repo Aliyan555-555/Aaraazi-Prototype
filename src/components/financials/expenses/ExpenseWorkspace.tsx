@@ -10,6 +10,7 @@ import { BulkExpenseActions } from './BulkExpenseActions';
 import { Button } from '../../ui/button';
 import { getExpenses, addExpense, updateExpense, deleteExpense, getProperties } from '../../../lib/data';
 import { formatPKR } from '../../../lib/currency';
+import { formatPropertyAddress } from '../../../lib/utils';
 import { toast } from 'sonner';
 import { Plus, Download, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 
@@ -96,7 +97,7 @@ export const ExpenseWorkspace: React.FC<ExpenseWorkspaceProps> = ({
   const properties = useMemo(() => {
     return getProperties(user.id, user.role).map(p => ({
       id: p.id,
-      title: p.title || p.address
+      title: p.title || formatPropertyAddress(p.address) || 'Untitled Property'
     }));
   }, [user.id, user.role]);
 

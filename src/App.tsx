@@ -83,7 +83,6 @@ const CommissionReports = lazy(() => import('./components/CommissionReports').th
 const FinancialsHubV4 = lazy(() => import('./components/financials/FinancialsHubV4').then(m => ({ default: m.FinancialsHubV4 })));
 const ProjectAccounting = lazy(() => import('./components/ProjectAccounting').then(m => ({ default: m.ProjectAccounting })));
 const BankingTreasury = lazy(() => import('./components/BankingTreasury').then(m => ({ default: m.BankingTreasury })));
-const FinancialReports = lazy(() => import('./components/FinancialReports').then(m => ({ default: m.FinancialReports })));
 const BudgetingDashboard = lazy(() => import('./components/BudgetingDashboard').then(m => ({ default: m.BudgetingDashboard })));
 const BuyerWorkspace = lazy(() => import('./components/BuyerWorkspace').then(m => ({ default: m.BuyerWorkspace })));
 const DocumentManagement = lazy(() => import('./components/DocumentManagement').then(m => ({ default: m.DocumentManagement })));
@@ -1644,9 +1643,8 @@ function App() {
           );
 
         case 'financials':
-          return <FinancialsHubV4 user={user} onNavigate={(module) => {
-            console.log('Navigate to financial module:', module);
-            // TODO: Add module-specific routing once workspaces are created
+          return <FinancialsHubV4 user={user} defaultModule={null} onNavigate={(module) => {
+            if (module) console.log('Navigate to financial module:', module);
           }} />;
 
         case 'agency':
@@ -1869,7 +1867,9 @@ function App() {
           return <BankingTreasury user={user} />;
 
         case 'financial-reports':
-          return <FinancialReports user={user} />;
+          return <FinancialsHubV4 user={user} defaultModule="reports" onNavigate={(module) => {
+            if (module && module !== 'reports') console.log('Navigate to financial module:', module);
+          }} />;
 
         case 'projects':
           return <ProjectList user={user} onNavigate={handleNavigation} />;

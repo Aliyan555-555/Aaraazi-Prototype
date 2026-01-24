@@ -82,6 +82,7 @@ import {
   getRentRequirement,
 } from '../lib/rentRequirements';
 import { formatPKR } from '../lib/currency';
+import { formatPropertyAddress } from '../lib/utils';
 import { toast } from 'sonner';
 import {
   findMatchingPropertiesForRent,
@@ -95,6 +96,7 @@ import {
   findSharedMatchesForRentRequirement,
   submitCrossAgentRentApplicationFromMatch,
 } from '../lib/smartMatching';
+import { addTenantApplication, getRentCycleById } from '../lib/rentCycle';
 
 interface RentRequirementDetailsV4Props {
   requirement: RentRequirement;
@@ -194,6 +196,20 @@ export function RentRequirementDetailsV4({
       return;
     }
 
+    // Check if application already exists
+    const rentCycle = getRentCycleById(match.rentCycleId);
+    if (rentCycle?.applications) {
+      const existingApp = rentCycle.applications.find(
+        (app: any) => app.fromRequirementId === requirement.id
+      );
+      
+      if (existingApp) {
+        toast.error('Application already submitted for this property');
+        onUpdate(); // Refresh to show updated status
+        return;
+      }
+    }
+
     try {
       // Show loading toast
       const loadingToast = toast.loading('Submitting application to shared property...');
@@ -214,7 +230,69 @@ export function RentRequirementDetailsV4({
       onUpdate();
     } catch (error) {
       console.error('Error submitting cross-agent application:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to submit application. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit application. Please try again.';
+      toast.error(errorMessage);
+      
+      // If it's a duplicate error, refresh to show updated status
+      if (errorMessage.includes('already submitted') || errorMessage.includes('already exists')) {
+        onUpdate();
+      }
+    }
+  };
+
+  // Helper function to check if application already exists
+  const getApplicationStatus = (match: PropertyMatch): 'none' | 'pending' | 'accepted' | 'rejected' => {
+    if (!match.rentCycleId) return 'none';
+    
+    const rentCycle = getRentCycleById(match.rentCycleId);
+    if (!rentCycle || !rentCycle.applications) return 'none';
+    
+    const existingApp = rentCycle.applications.find(
+      (app: any) => app.fromRequirementId === requirement.id && 
+      app.tenantId === requirement.renterId
+    );
+    
+    if (!existingApp) return 'none';
+    return existingApp.status || 'pending';
+  };
+
+  const handleSubmitApplication = (match: PropertyMatch) => {
+    if (!match.rentCycleId) {
+      toast.error('No rent cycle ID found for this property');
+      return;
+    }
+
+    // Check if application already exists
+    const existingStatus = getApplicationStatus(match);
+    if (existingStatus !== 'none') {
+      toast.error('Application already submitted for this property');
+      return;
+    }
+
+    try {
+      // Add tenant application to the rent cycle
+      addTenantApplication(
+        match.rentCycleId,
+        requirement.renterId || `tenant_${Date.now()}`,
+        requirement.renterName,
+        requirement.renterContact || '',
+        `Application submitted from rent requirement ${requirement.id}`,
+        requirement.id // Pass requirement ID to track duplicates
+      );
+      
+      toast.success('Application submitted successfully!');
+      
+      // Refresh data
+      onUpdate();
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit application. Please try again.';
+      toast.error(errorMessage);
+      
+      // If it's a duplicate error, refresh to show updated status
+      if (errorMessage.includes('already submitted')) {
+        onUpdate();
+      }
     }
   };
 
@@ -762,7 +840,9 @@ export function RentRequirementDetailsV4({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <h3 className="text-base font-medium mb-2">{match.property.title}</h3>
-                <p className="text-sm text-gray-600 mb-3">{match.property.address}</p>
+                <p className="text-sm text-gray-600 mb-3">
+                  {formatPropertyAddress(match.property.address)}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline">
                     {match.matchScore}% Match
@@ -772,13 +852,52 @@ export function RentRequirementDetailsV4({
                   </Badge>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleNavigation('property', match.propertyId)}
-              >
-                View Details
-              </Button>
+              {(() => {
+                const appStatus = getApplicationStatus(match);
+                if (appStatus === 'none') {
+                  return (
+                    <Button
+                      size="sm"
+                      onClick={() => handleSubmitApplication(match)}
+                    >
+                      Submit Application
+                    </Button>
+                  );
+                } else if (appStatus === 'pending') {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="bg-yellow-50 text-yellow-700 border-yellow-300"
+                    >
+                      Pending
+                    </Button>
+                  );
+                } else if (appStatus === 'accepted') {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="bg-green-50 text-green-700 border-green-300"
+                    >
+                      Accepted
+                    </Button>
+                  );
+                } else {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      className="bg-red-50 text-red-700 border-red-300"
+                    >
+                      Rejected
+                    </Button>
+                  );
+                }
+              })()}
             </div>
           </div>
         ))}
@@ -822,21 +941,60 @@ export function RentRequirementDetailsV4({
                   </Badge>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNavigation('property', match.propertyId)}
-                >
-                  View Details
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleCrossAgentApplication(match)}
-                >
-                  Submit Application
-                </Button>
-              </div>
+              {(() => {
+                // Check if application already exists for shared matches
+                const rentCycle = match.rentCycleId ? getRentCycleById(match.rentCycleId) : null;
+                const existingApp = rentCycle?.applications?.find(
+                  (app: any) => app.fromRequirementId === requirement.id
+                );
+                
+                if (existingApp) {
+                  const status = existingApp.status || 'pending';
+                  if (status === 'pending') {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="bg-yellow-50 text-yellow-700 border-yellow-300"
+                      >
+                        Pending
+                      </Button>
+                    );
+                  } else if (status === 'accepted') {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="bg-green-50 text-green-700 border-green-300"
+                      >
+                        Accepted
+                      </Button>
+                    );
+                  } else {
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="bg-red-50 text-red-700 border-red-300"
+                      >
+                        Rejected
+                      </Button>
+                    );
+                  }
+                }
+                
+                return (
+                  <Button
+                    size="sm"
+                    onClick={() => handleCrossAgentApplication(match)}
+                  >
+                    Submit Application
+                  </Button>
+                );
+              })()}
             </div>
           </div>
         ))}

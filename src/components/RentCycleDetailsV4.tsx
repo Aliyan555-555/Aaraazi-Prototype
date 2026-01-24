@@ -94,7 +94,9 @@ import {
   renewLease,
   closeRentCycle,
   toggleRentCycleSharing,
+  addTenantApplication,
 } from '../lib/rentCycle';
+import { AddApplicationModal } from './AddApplicationModal';
 import { formatPKR } from '../lib/currency';
 import { formatPropertyAddress } from '../lib/utils';
 import { toast } from 'sonner';
@@ -130,6 +132,7 @@ export function RentCycleDetailsV4({
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(cycle.monthlyRent);
   const [paymentMonth, setPaymentMonth] = useState('');
+  const [showAddApplicationModal, setShowAddApplicationModal] = useState(false);
 
   // Phase 4C: Cross-agent offers state
   const [crossAgentOffers, setCrossAgentOffers] = useState<CrossAgentOffer[]>([]);
@@ -167,10 +170,11 @@ export function RentCycleDetailsV4({
   const totalUpfront =
     (cycle.securityDeposit || 0) + cycle.monthlyRent * (cycle.advanceMonths || 0);
   const estimatedCommission = cycle.monthlyRent * cycle.commissionMonths;
-  const pendingApplications =
-    cycle.tenantApplications?.filter((a) => a.status === 'pending') || [];
-  const approvedApplications =
-    cycle.tenantApplications?.filter((a) => a.status === 'approved') || [];
+  
+  // CRITICAL FIX: Use applications field (lib uses this), with fallback to tenantApplications for compatibility
+  const applications = (cycle as any).applications || (cycle as any).tenantApplications || [];
+  const pendingApplications = applications.filter((a: any) => a.status === 'pending') || [];
+  const approvedApplications = applications.filter((a: any) => a.status === 'approved') || [];
 
   // Days active
   const daysActive = cycle.createdAt
@@ -196,15 +200,20 @@ export function RentCycleDetailsV4({
       return;
     }
 
-    const result = signLease(cycle.id, applicationId, leaseStartDate, leaseEndDate);
-    if (result.success) {
-      toast.success('Lease signed successfully!');
-      setSigningLeaseForId(null);
-      setLeaseStartDate('');
-      setLeaseEndDate('');
-      onUpdate();
-    } else {
-      toast.error(result.error || 'Failed to sign lease');
+    try {
+      const result = signLease(cycle.id, applicationId, leaseStartDate, leaseEndDate);
+      if (result.success) {
+        toast.success('Lease signed successfully!');
+        setSigningLeaseForId(null);
+        setLeaseStartDate('');
+        setLeaseEndDate('');
+        onUpdate();
+      } else {
+        toast.error(result.error || 'Failed to sign lease');
+      }
+    } catch (error) {
+      console.error('Error signing lease:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to sign lease');
     }
   };
 
@@ -368,8 +377,8 @@ export function RentCycleDetailsV4({
                 : cycle.status === 'available'
                 ? 'current'
                 : 'pending',
-            description: `${cycle.tenantApplications?.length || 0} application${
-              (cycle.tenantApplications?.length || 0) !== 1 ? 's' : ''
+            description: `${applications.length || 0} application${
+              applications.length !== 1 ? 's' : ''
             }`,
           },
           {
@@ -601,7 +610,7 @@ export function RentCycleDetailsV4({
         title="Quick Actions"
         actions={[
           {
-            label: `View Applications (${cycle.tenantApplications?.length || 0})`,
+            label: `View Applications (${applications.length || 0})`,
             icon: <Users className="h-4 w-4" />,
             onClick: () => toast.info('Switch to Applications tab'),
           },
@@ -673,7 +682,7 @@ export function RentCycleDetailsV4({
           {
             icon: <Users className="h-4 w-4" />,
             label: 'Total Applications',
-            value: cycle.tenantApplications?.length || 0,
+            value: applications.length || 0,
             color: 'blue',
           },
           {
@@ -721,7 +730,7 @@ export function RentCycleDetailsV4({
       key: 'applicationDate',
       label: 'Applied On',
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (value, row) => new Date(row.appliedDate || row.applicationDate || row.submittedDate || value || new Date()).toLocaleDateString(),
     },
     {
       key: 'status',
@@ -731,10 +740,23 @@ export function RentCycleDetailsV4({
     },
   ];
 
-  const applicationsContent =
-    cycle.tenantApplications && cycle.tenantApplications.length > 0 ? (
-      <div className="space-y-6">
-        {cycle.tenantApplications.map((app) => (
+  const applicationsContent = (
+    <div className="space-y-6">
+      {/* Header with Record Application Button */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-medium">Tenant Applications</h3>
+        {cycle.status !== 'leased' && cycle.status !== 'ended' && (
+          <Button onClick={() => setShowAddApplicationModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Record Application
+          </Button>
+        )}
+      </div>
+
+      {/* Applications List */}
+      {applications && applications.length > 0 ? (
+        <div className="space-y-4">
+          {applications.map((app: any) => (
           <div
             key={app.id}
             className="bg-white border border-gray-200 rounded-lg p-6"
@@ -759,7 +781,7 @@ export function RentCycleDetailsV4({
                 </div>
               </div>
               <div className="text-xs text-gray-500">
-                Applied {new Date(app.applicationDate).toLocaleDateString()}
+                Applied {new Date(app.appliedDate || app.applicationDate || app.submittedDate || new Date()).toLocaleDateString()}
               </div>
             </div>
 
@@ -860,17 +882,25 @@ export function RentCycleDetailsV4({
               </div>
             )}
           </div>
-        ))}
-      </div>
-    ) : (
-      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-        <Users className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-        <h3 className="text-base mb-2">No Applications Yet</h3>
-        <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
-          No tenant applications have been received for this rental property yet.
-        </p>
-      </div>
-    );
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+          <Users className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+          <h3 className="text-base mb-2">No Applications Yet</h3>
+          <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+            No tenant applications have been received for this rental property yet.
+          </p>
+          {cycle.status !== 'leased' && cycle.status !== 'ended' && (
+            <Button onClick={() => setShowAddApplicationModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Record Application
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   // ==================== LEASE TAB ====================
   const leaseContent = cycle.currentTenantId ? (
@@ -1054,13 +1084,13 @@ export function RentCycleDetailsV4({
     });
 
     // Applications
-    (cycle.tenantApplications || []).forEach((app) => {
+    applications.forEach((app: any) => {
       activityList.push({
         id: `app-${app.id}`,
         type: 'communication',
         title: 'Application received',
         description: `From ${app.tenantName}`,
-        date: app.applicationDate,
+        date: app.appliedDate || app.applicationDate || app.submittedDate || new Date().toISOString(),
         icon: <Users className="h-5 w-5 text-blue-600" />,
       });
 
@@ -1070,7 +1100,7 @@ export function RentCycleDetailsV4({
           type: 'status-change',
           title: 'Application approved',
           description: app.tenantName,
-          date: app.applicationDate,
+          date: app.appliedDate || app.applicationDate || app.submittedDate || new Date().toISOString(),
           icon: <CheckCircle className="h-5 w-5 text-green-600" />,
         });
       }
@@ -1126,7 +1156,7 @@ export function RentCycleDetailsV4({
     },
     {
       id: 'applications',
-      label: `Applications (${cycle.tenantApplications?.length || 0})`,
+      label: `Applications (${applications.length || 0})`,
       content: applicationsContent,
       layout: '3-0',
     },
@@ -1170,6 +1200,19 @@ export function RentCycleDetailsV4({
         connectedEntities={connectedEntities}
         tabs={tabs}
         defaultTab="overview"
+      />
+
+      {/* Add Application Modal */}
+      <AddApplicationModal
+        isOpen={showAddApplicationModal}
+        onClose={() => setShowAddApplicationModal(false)}
+        rentCycleId={cycle.id}
+        monthlyRent={cycle.monthlyRent}
+        user={user}
+        onSuccess={() => {
+          setShowAddApplicationModal(false);
+          onUpdate();
+        }}
       />
 
       {/* Phase 4C: Share Toggle - Floating Action */}
