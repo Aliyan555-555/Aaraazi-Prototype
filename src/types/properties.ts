@@ -54,10 +54,15 @@ export interface Property {
 
     // Financials & Ownership (Historical/V3 legacy often used in reports)
     soldDate?: string;
+    finalSalePrice?: number;
     commissionEarned?: number;
     commissionRate?: number;
+    currentOwnerId?: string;
     currentOwnerName?: string;
-    currentOwnerType?: string;
+    currentOwnerType?: 'client' | 'agency' | 'investor' | 'external';
+    ownershipHistory?: any[]; // Full OwnershipRecord[] type might cause circular dependency if imported
+    investorShares?: any[]; // InvestorShare[]
+    transactionIds?: string[];
     cycleHistory?: any;
 
     // Legacy/Module Specific

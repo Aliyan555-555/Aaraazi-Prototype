@@ -3,8 +3,10 @@ import { createNotification } from './notifications';
 import { triggerAutomation } from './tasks';
 import { getPermissions } from './dealPermissions';
 import { linkAllContactsToDeal, linkDealToTransaction } from './dataFlowConnections';
-import { updatePurchaseCycle, getPurchaseCycleById, savePurchaseCycle } from './purchaseCycle';
-import { getSellCycleById, updateSellCycle, saveSellCycle } from './sellCycle';
+// REMOVED CIRCULAR IMPORTS: updatePurchaseCycle, getPurchaseCycleById, savePurchaseCycle
+// REMOVED CIRCULAR IMPORTS: getSellCycleById, updateSellCycle, saveSellCycle
+// These functions are defined locally at the bottom of this file to prevent circular dependencies
+// with sellCycle.ts and purchaseCycle.ts which both import from deals.ts
 import { transferOwnership } from './ownership';
 import { updateProperty, getPropertyById } from './data';
 import { saveTransaction } from './transactions';
@@ -1123,21 +1125,23 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
           const transaction = {
             id: transactionId,
             propertyId: sellCycle.propertyId,
-            type: 'sale' as const,
+            type: 'sell' as const,
             agentId: deal.agents.primary.id,
             buyerName: deal.parties.buyer.name,
             buyerContactId: deal.parties.buyer.id,
             sellerName: deal.parties.seller.name,
             sellerContactId: deal.parties.seller.id,
+            agreedPrice: deal.financial.agreedPrice, // Required by Transaction type
             acceptedOfferAmount: deal.financial.agreedPrice,
             commissionAmount: deal.financial.commission.total,
             acceptedDate: now.split('T')[0],
+            startDate: deal.lifecycle.timeline.offerAcceptedDate || now, // Required by Transaction type
             status: 'completed' as const,
             sellCycleId: deal.cycles.sellCycle.id,
             purchaseCycleId: deal.cycles.purchaseCycle?.id,
             createdAt: now,
             updatedAt: now,
-          };
+          } as any; // Cast to any to allow extra fields not in strict Transaction interface
 
           saveTransaction(transaction);
 
@@ -1223,6 +1227,11 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
           console.log(`   - New Owner: ${deal.parties.buyer.name}`);
           console.log(`   - Transaction: ${transactionId}`);
         }
+        else {
+          throw new Error(`Property ${sellCycle.propertyId} not found in database`);
+        }
+      } else {
+        throw new Error(`Sell Cycle ${deal.cycles.sellCycle.id} not found`);
       }
     } else if (deal.cycles.purchaseCycle) {
       // Single-cycle purchase deal (buyer-side only)
@@ -1256,14 +1265,16 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
             buyerContactId: deal.parties.buyer.id,
             sellerName: deal.parties.seller.name,
             sellerContactId: deal.parties.seller.id,
+            agreedPrice: deal.financial.agreedPrice, // Required by Transaction type
             acceptedOfferAmount: deal.financial.agreedPrice,
             commissionAmount: deal.financial.commission.total,
             acceptedDate: now.split('T')[0],
+            startDate: deal.lifecycle.timeline.offerAcceptedDate || now, // Required by Transaction type
             status: 'completed' as const,
             purchaseCycleId: deal.cycles.purchaseCycle.id,
             createdAt: now,
             updatedAt: now,
-          };
+          } as any; // Cast to any to allow extra fields not in strict Transaction interface
 
           console.log('🔍 Creating transaction for purchase cycle:', transaction);
           saveTransaction(transaction);
@@ -1340,21 +1351,25 @@ export const completeDeal = (dealId: string, agentId: string, agentName: string)
           console.log(`   - New Owner: ${deal.parties.buyer.name}`);
           console.log(`   - Transaction: ${transactionId}`);
         } else {
-          console.error('❌ Property not found:', purchaseCycle.propertyId);
+          // Property not found
+          throw new Error(`Property ${purchaseCycle.propertyId} not found`);
         }
       } else {
-        console.error('❌ Purchase cycle not found:', deal.cycles.purchaseCycle.id);
+        // Purchase cycle not found
+        throw new Error(`Purchase Cycle ${deal.cycles.purchaseCycle.id} not found`);
       }
     }
   } catch (error) {
     console.error('Error handling ownership transfer:', error);
-    // Don't throw - deal is still marked as completed
+    // CRITICAL FIX: Throw the error to prevent partial completion state
+    // If ownership transfer fails, the entire deal completion should fail
+    throw error;
   }
 
   // Update status
   deal.lifecycle.status = 'completed';
   deal.lifecycle.timeline.actualClosingDate = now;
-  deal.metadata.completedAt = now;
+  // deal.metadata.completedAt = now; // Removed: Not in type definition
 
   // Mark all stages as completed
   Object.keys(deal.lifecycle.timeline.stages).forEach(key => {
@@ -1610,7 +1625,7 @@ const savePurchaseCycle = (cycle: PurchaseCycle): void => {
  */
 const getSellCycles = (): SellCycle[] => {
   try {
-    const data = localStorage.getItem('estatemanager_sell_cycles');
+    const data = localStorage.getItem('sell_cycles_v3');
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Error reading sell cycles:', error);
@@ -1623,7 +1638,7 @@ const getSellCycles = (): SellCycle[] => {
  */
 const saveSellCycles = (cycles: SellCycle[]): void => {
   try {
-    localStorage.setItem('estatemanager_sell_cycles', JSON.stringify(cycles));
+    localStorage.setItem('sell_cycles_v3', JSON.stringify(cycles));
   } catch (error) {
     console.error('Error saving sell cycles:', error);
     throw error;
@@ -1635,7 +1650,7 @@ const saveSellCycles = (cycles: SellCycle[]): void => {
  */
 const getPurchaseCycles = (): PurchaseCycle[] => {
   try {
-    const data = localStorage.getItem('estatemanager_purchase_cycles');
+    const data = localStorage.getItem('purchase_cycles_v3');
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Error reading purchase cycles:', error);
@@ -1648,10 +1663,36 @@ const getPurchaseCycles = (): PurchaseCycle[] => {
  */
 const savePurchaseCycles = (cycles: PurchaseCycle[]): void => {
   try {
-    localStorage.setItem('estatemanager_purchase_cycles', JSON.stringify(cycles));
+    localStorage.setItem('purchase_cycles_v3', JSON.stringify(cycles));
   } catch (error) {
     console.error('Error saving purchase cycles:', error);
     throw error;
+  }
+};
+
+/**
+ * Update sell cycle
+ */
+const updateSellCycle = (id: string, updates: Partial<SellCycle>): void => {
+  const cycles = getSellCycles();
+  const index = cycles.findIndex(c => c.id === id);
+
+  if (index !== -1) {
+    cycles[index] = { ...cycles[index], ...updates };
+    saveSellCycles(cycles);
+  }
+};
+
+/**
+ * Update purchase cycle
+ */
+const updatePurchaseCycle = (id: string, updates: Partial<PurchaseCycle>): void => {
+  const cycles = getPurchaseCycles();
+  const index = cycles.findIndex(c => c.id === id);
+
+  if (index !== -1) {
+    cycles[index] = { ...cycles[index], ...updates };
+    savePurchaseCycles(cycles);
   }
 };
 

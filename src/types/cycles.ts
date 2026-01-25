@@ -8,7 +8,8 @@ export type CycleStatus =
     | 'active' | 'pending' | 'completed' | 'cancelled' | 'on-hold'
     | 'showing' | 'leased' | 'renewal-pending' | 'ending' | 'ended'
     | 'application-received' | 'applications-received' | 'available'
-    | 'listed' | 'negotiation' | 'under-contract' | 'sold' | 'rejected' | 'offer-received';
+    | 'listed' | 'negotiation' | 'under-contract' | 'sold' | 'rejected' | 'offer-received'
+    | 'acquired';
 
 export interface BaseCycle {
     id: string;
@@ -108,9 +109,11 @@ export interface PurchaseCycle extends BaseCycle {
     targetPrice?: number;
     maxPrice?: number;
     investmentGoal?: string;
+    actualCloseDate?: string;
     buyerRequirementId?: string;
     purchaserName?: string;
     purchaserType?: string;
+    investors?: any[]; // InvestorShare[]
 
     // Links & Sync
     linkedDealId?: string;
